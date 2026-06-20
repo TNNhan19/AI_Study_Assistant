@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Toolbar -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/surface" android:elevation="4dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:padding="@dimen/spacing_md" android:paddingTop="48dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="AI Assistant" android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_xl" android:fontFamily="sans-serif-medium"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="General Learning Chat" android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_sm"/>
+        </LinearLayout>
+        <ImageButton android:id="@+id/btn_new_chat"
+            android:layout_width="40dp" android:layout_height="40dp"
+            android:src="@android:drawable/ic_input_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/primary" android:contentDescription="New Chat"/>
+    </LinearLayout>
+
+    <!-- Messages RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_messages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="@dimen/spacing_md"
+        android:clipToPadding="false"/>
+
+    <!-- AI Typing Indicator -->
+    <LinearLayout android:id="@+id/layout_typing"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="@dimen/spacing_md" android:paddingBottom="@dimen/spacing_xs"
+        android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="🤖" android:textSize="18sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text=" AI is thinking..." android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_sm"/>
+        <ProgressBar android:layout_width="20dp" android:layout_height="20dp"
+            android:layout_marginStart="@dimen/spacing_xs"/>
+    </LinearLayout>
+
+    <!-- Input Bar -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:background="@color/surface" android:elevation="8dp"
+        android:padding="@dimen/spacing_sm">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_message"
+            style="@style/InputLayout"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:hint="@string/type_message">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_message"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="textMultiLine" android:maxLines="4"
+                android:imeOptions="actionSend"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_send"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            app:fabSize="mini"
+            android:src="@android:drawable/ic_menu_send"
+            app:backgroundTint="@color/primary"
+            app:tint="@color/text_on_primary"
+            android:contentDescription="Send"/>
+    </LinearLayout>
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent" android:layout_height="@dimen/bottom_nav_height"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="@color/nav_selector"
+        app:itemTextColor="@color/nav_selector"
+        android:background="@color/surface" app:elevation="8dp"/>
+</LinearLayout>

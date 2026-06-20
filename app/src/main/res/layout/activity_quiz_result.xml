@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_gradient">
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg"
+            android:paddingTop="60dp" android:gravity="center_horizontal">
+
+            <!-- Score Circle -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="160dp" android:layout_height="160dp"
+                app:cardCornerRadius="80dp" app:cardElevation="8dp"
+                app:cardBackgroundColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:orientation="vertical" android:gravity="center">
+                    <TextView android:id="@+id/tv_score"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="8/10" android:textColor="@color/primary"
+                        android:textSize="36sp" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Score" android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_md"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Performance Label -->
+            <TextView android:id="@+id/tv_performance"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="🎉 Excellent!" android:textColor="@color/text_on_primary"
+                android:textSize="@dimen/text_xxl" android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="@dimen/spacing_lg"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Great job on this quiz!" android:textColor="#CCffffff"
+                android:textSize="@dimen/text_md" android:layout_marginTop="@dimen/spacing_xs"/>
+
+            <!-- Stats Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xl"
+                app:cardCornerRadius="@dimen/card_radius" app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:padding="@dimen/spacing_lg">
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                        <TextView android:id="@+id/tv_correct_count"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="8" android:textColor="@color/quiz_correct"
+                            android:textSize="32sp" android:fontFamily="sans-serif-medium"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Correct" android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"/>
+                    </LinearLayout>
+
+                    <View android:layout_width="1dp" android:layout_height="match_parent"
+                        android:background="@color/divider"/>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                        <TextView android:id="@+id/tv_wrong_count"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="2" android:textColor="@color/quiz_wrong"
+                            android:textSize="32sp" android:fontFamily="sans-serif-medium"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Wrong" android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"/>
+                    </LinearLayout>
+
+                    <View android:layout_width="1dp" android:layout_height="match_parent"
+                        android:background="@color/divider"/>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                        <TextView android:id="@+id/tv_percent"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="80%" android:textColor="@color/primary"
+                            android:textSize="32sp" android:fontFamily="sans-serif-medium"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Accuracy" android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Buttons -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_retake"
+                style="@style/ButtonPrimary"
+                android:layout_width="match_parent" android:layout_height="@dimen/btn_height"
+                android:text="Retake Quiz"
+                android:layout_marginTop="@dimen/spacing_xl"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_back_to_doc"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent" android:layout_height="@dimen/btn_height"
+                android:text="Back to Document"
+                android:textColor="@color/text_on_primary"
+                app:strokeColor="@color/text_on_primary"
+                android:layout_marginTop="@dimen/spacing_sm"/>
+
+            <View android:layout_width="match_parent" android:layout_height="32dp"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

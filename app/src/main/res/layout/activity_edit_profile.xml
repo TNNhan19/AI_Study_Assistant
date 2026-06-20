@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Header -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@drawable/bg_gradient"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:padding="@dimen/spacing_lg" android:paddingTop="48dp">
+        <ImageButton android:id="@+id/btn_back"
+            android:layout_width="40dp" android:layout_height="40dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/text_on_primary" android:contentDescription="Back"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Edit Profile" android:textColor="@color/text_on_primary"
+            android:textSize="@dimen/text_xl" android:fontFamily="sans-serif-medium"
+            android:paddingStart="@dimen/spacing_sm"/>
+    </LinearLayout>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg">
+
+            <!-- Avatar -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center"
+                android:layout_marginBottom="@dimen/spacing_lg">
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/iv_avatar"
+                    android:layout_width="@dimen/avatar_size_lg"
+                    android:layout_height="@dimen/avatar_size_lg"
+                    android:src="@mipmap/ic_launcher_round"
+                    app:civ_border_width="3dp"
+                    app:civ_border_color="@color/primary"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_change_avatar"
+                    style="@style/ButtonText"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/change_avatar"
+                    android:layout_marginTop="@dimen/spacing_xs"/>
+            </LinearLayout>
+
+            <!-- Full Name -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_full_name"
+                style="@style/InputLayout"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="@string/full_name">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_full_name"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textPersonName"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Email (read-only) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_email"
+                style="@style/InputLayout"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_md"
+                android:hint="@string/email">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_email"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"
+                    android:focusable="false" android:enabled="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                style="@style/ButtonPrimary"
+                android:layout_width="match_parent" android:layout_height="@dimen/btn_height"
+                android:text="@string/save_profile"
+                android:layout_marginTop="@dimen/spacing_xl"/>
+
+            <ProgressBar android:id="@+id/progress_bar"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:layout_marginTop="@dimen/spacing_sm"
+                android:visibility="gone"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

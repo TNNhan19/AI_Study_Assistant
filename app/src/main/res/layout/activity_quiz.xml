@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Header -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@drawable/bg_gradient"
+        android:orientation="vertical" android:padding="@dimen/spacing_lg"
+        android:paddingTop="48dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <ImageButton android:id="@+id/btn_back"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:src="@android:drawable/ic_media_previous"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:tint="@color/text_on_primary" android:contentDescription="Back"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="Quiz"
+                android:textColor="@color/text_on_primary" android:textSize="@dimen/text_xl"
+                android:fontFamily="sans-serif-medium" android:paddingStart="@dimen/spacing_sm"/>
+        </LinearLayout>
+
+        <!-- Progress bar -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:layout_marginTop="@dimen/spacing_md">
+            <ProgressBar android:id="@+id/progress_quiz"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp" android:layout_height="8dp"
+                android:layout_weight="1"
+                android:progressTint="@color/text_on_primary"
+                android:progressBackgroundTint="#44FFFFFF"
+                android:max="100" android:progress="0"/>
+            <TextView android:id="@+id/tv_question_count"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="1/10" android:textColor="@color/text_on_primary"
+                android:textSize="@dimen/text_sm" android:paddingStart="@dimen/spacing_sm"
+                android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Quiz Content -->
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg">
+
+            <!-- Loading -->
+            <LinearLayout android:id="@+id/layout_loading"
+                android:layout_width="match_parent" android:layout_height="200dp"
+                android:orientation="vertical" android:gravity="center" android:visibility="gone">
+                <ProgressBar android:layout_width="48dp" android:layout_height="48dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Generating quiz..." android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_md" android:layout_marginTop="@dimen/spacing_md"/>
+            </LinearLayout>
+
+            <!-- Question Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_question"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardCornerRadius="@dimen/card_radius" app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:padding="@dimen/spacing_lg">
+                    <TextView android:id="@+id/tv_question_number"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Question 1" android:textColor="@color/primary"
+                        android:textSize="@dimen/text_sm" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:id="@+id/tv_question"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="What is the question?" android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_xl" android:layout_marginTop="@dimen/spacing_sm"
+                        android:lineSpacingMultiplier="1.4"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Options -->
+            <LinearLayout android:id="@+id/layout_option_a"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_quiz_option"
+                android:padding="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_sm">
+                <TextView android:layout_width="32dp" android:layout_height="32dp"
+                    android:text="A" android:textColor="@color/primary"
+                    android:textSize="@dimen/text_md" android:fontFamily="sans-serif-medium"
+                    android:gravity="center" android:background="@drawable/bg_circle_option"/>
+                <TextView android:id="@+id/tv_option_a"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Option A"
+                    android:textColor="@color/text_primary" android:textSize="@dimen/text_md"
+                    android:paddingStart="@dimen/spacing_md"/>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/layout_option_b"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_quiz_option"
+                android:padding="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_sm">
+                <TextView android:layout_width="32dp" android:layout_height="32dp"
+                    android:text="B" android:textColor="@color/primary"
+                    android:textSize="@dimen/text_md" android:fontFamily="sans-serif-medium"
+                    android:gravity="center" android:background="@drawable/bg_circle_option"/>
+                <TextView android:id="@+id/tv_option_b"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Option B"
+                    android:textColor="@color/text_primary" android:textSize="@dimen/text_md"
+                    android:paddingStart="@dimen/spacing_md"/>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/layout_option_c"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_quiz_option"
+                android:padding="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_sm">
+                <TextView android:layout_width="32dp" android:layout_height="32dp"
+                    android:text="C" android:textColor="@color/primary"
+                    android:textSize="@dimen/text_md" android:fontFamily="sans-serif-medium"
+                    android:gravity="center" android:background="@drawable/bg_circle_option"/>
+                <TextView android:id="@+id/tv_option_c"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Option C"
+                    android:textColor="@color/text_primary" android:textSize="@dimen/text_md"
+                    android:paddingStart="@dimen/spacing_md"/>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/layout_option_d"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_quiz_option"
+                android:padding="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_md">
+                <TextView android:layout_width="32dp" android:layout_height="32dp"
+                    android:text="D" android:textColor="@color/primary"
+                    android:textSize="@dimen/text_md" android:fontFamily="sans-serif-medium"
+                    android:gravity="center" android:background="@drawable/bg_circle_option"/>
+                <TextView android:id="@+id/tv_option_d"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Option D"
+                    android:textColor="@color/text_primary" android:textSize="@dimen/text_md"
+                    android:paddingStart="@dimen/spacing_md"/>
+            </LinearLayout>
+
+            <!-- Feedback Card (hidden until answered) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_feedback"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/quiz_correct_bg"
+                android:visibility="gone">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:padding="@dimen/spacing_md">
+                    <TextView android:id="@+id/tv_feedback_title"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="✅ Correct!" android:textColor="@color/quiz_correct"
+                        android:textSize="@dimen/text_lg" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:id="@+id/tv_explanation"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="Explanation text here" android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_md" android:layout_marginTop="@dimen/spacing_xs"
+                        android:lineSpacingMultiplier="1.4"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Next Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_next"
+                style="@style/ButtonPrimary"
+                android:layout_width="match_parent" android:layout_height="@dimen/btn_height"
+                android:text="Next Question"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

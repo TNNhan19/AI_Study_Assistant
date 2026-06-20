@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Header -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@drawable/bg_gradient"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:padding="@dimen/spacing_lg" android:paddingTop="48dp">
+        <ImageButton android:id="@+id/btn_back"
+            android:layout_width="40dp" android:layout_height="40dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/text_on_primary" android:contentDescription="Back"/>
+        <TextView android:id="@+id/tv_title"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Create Schedule" android:textColor="@color/text_on_primary"
+            android:textSize="@dimen/text_xl" android:fontFamily="sans-serif-medium"
+            android:paddingStart="@dimen/spacing_sm"/>
+    </LinearLayout>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg">
+
+            <!-- Title -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_title"
+                style="@style/InputLayout"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="@string/schedule_title">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_title"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="text" android:hint="@string/schedule_hint_title"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Description -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_description"
+                style="@style/InputLayout"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_md"
+                android:hint="@string/schedule_description">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_description"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textMultiLine" android:lines="3"
+                    android:hint="@string/schedule_hint_desc"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Date Picker -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Date" android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_sm" android:layout_marginTop="@dimen/spacing_lg"
+                android:layout_marginBottom="@dimen/spacing_xs"/>
+
+            <LinearLayout android:id="@+id/layout_date_picker"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_card_rounded" android:padding="@dimen/spacing_md">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="📅 " android:textSize="18sp"/>
+                <TextView android:id="@+id/tv_date"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Select date" android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_md"/>
+                <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                    android:src="@android:drawable/ic_media_next"
+                    android:tint="@color/text_secondary"/>
+            </LinearLayout>
+
+            <!-- Time Picker -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Time" android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_sm" android:layout_marginTop="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_xs"/>
+
+            <LinearLayout android:id="@+id/layout_time_picker"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_card_rounded" android:padding="@dimen/spacing_md">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="🕐 " android:textSize="18sp"/>
+                <TextView android:id="@+id/tv_time"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Select time" android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_md"/>
+                <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                    android:src="@android:drawable/ic_media_next"
+                    android:tint="@color/text_secondary"/>
+            </LinearLayout>
+
+            <!-- Enable Notification toggle -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_card_rounded" android:padding="@dimen/spacing_md"
+                android:layout_marginTop="@dimen/spacing_md">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Enable Reminder" android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_md" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Get notified when it's time to study"
+                        android:textColor="@color/text_secondary" android:textSize="@dimen/text_sm"/>
+                </LinearLayout>
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_reminder"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:checked="true"/>
+            </LinearLayout>
+
+            <!-- Save Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                style="@style/ButtonPrimary"
+                android:layout_width="match_parent" android:layout_height="@dimen/btn_height"
+                android:text="Save Schedule"
+                android:layout_marginTop="@dimen/spacing_xl"/>
+
+            <ProgressBar android:id="@+id/progress_bar"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:layout_marginTop="@dimen/spacing_sm"
+                android:visibility="gone"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
