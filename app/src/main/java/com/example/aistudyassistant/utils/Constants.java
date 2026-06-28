@@ -4,8 +4,8 @@ public class Constants {
 
     // ===================== Supabase Configuration =====================
     // TODO: Replace these with your actual Supabase credentials
-    public static final String SUPABASE_URL = "YOUR_SUPABASE_URL";  // e.g. https://xxxx.supabase.co
-    public static final String SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    public static final String SUPABASE_URL = "https://uyiadfzpluqfxqcwqikc.supabase.co";
+    public static final String SUPABASE_ANON_KEY = "sb_publishable_WcjXAJSy_tuGOeCPxvbDog_EvJDFYrP";
 
     // Supabase Table Names
     public static final String TABLE_USERS = "users";

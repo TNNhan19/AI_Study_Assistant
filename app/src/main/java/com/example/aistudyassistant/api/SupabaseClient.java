@@ -3,6 +3,7 @@ package com.example.aistudyassistant.api;
 import android.util.Log;
 
 import com.example.aistudyassistant.utils.Constants;
+import com.google.gson.JsonObject;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -67,8 +68,24 @@ public class SupabaseClient {
      * Returns the raw JSON response from Supabase Auth.
      */
     public String signUp(String email, String password) {
+        return signUp(email, password, null);
+    }
+
+    /**
+     * Register a new user with email, password, and optional display name metadata.
+     */
+    public String signUp(String email, String password, String fullName) {
         String url = baseUrl + "/auth/v1/signup";
-        String jsonBody = "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
+        // Gửi full_name vào user_metadata để app lấy lại tên sau khi đăng nhập.
+        JsonObject json = new JsonObject();
+        json.addProperty("email", email);
+        json.addProperty("password", password);
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            JsonObject data = new JsonObject();
+            data.addProperty("full_name", fullName.trim());
+            json.add("data", data);
+        }
+        String jsonBody = json.toString();
         return postRequest(url, jsonBody, false);
     }
 
@@ -78,7 +95,11 @@ public class SupabaseClient {
      */
     public String signIn(String email, String password) {
         String url = baseUrl + "/auth/v1/token?grant_type=password";
-        String jsonBody = "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
+        // Dùng JsonObject để tránh lỗi khi email/password có ký tự đặc biệt.
+        JsonObject json = new JsonObject();
+        json.addProperty("email", email);
+        json.addProperty("password", password);
+        String jsonBody = json.toString();
         return postRequest(url, jsonBody, false);
     }
 
@@ -161,9 +182,8 @@ public class SupabaseClient {
                     .addHeader("apikey", anonKey)
                     .addHeader("Content-Type", contentType);
 
-            if (accessToken != null && !accessToken.isEmpty()) {
-                builder.addHeader("Authorization", "Bearer " + accessToken);
-            }
+            // Storage cần bearer token; sau login dùng access token, chưa login dùng anon key.
+            builder.addHeader("Authorization", "Bearer " + getBearerToken());
 
             Request request = builder.build();
             try (Response response = httpClient.newCall(request).execute()) {
@@ -195,12 +215,10 @@ public class SupabaseClient {
                     .url(url)
                     .get()
                     .addHeader("apikey", anonKey)
+                    // Supabase REST cần cả apikey và Authorization header.
+                    .addHeader("Authorization", "Bearer " + getBearerToken())
                     .addHeader("Content-Type", "application/json")
                     .addHeader("Prefer", "return=representation");
-
-            if (accessToken != null && !accessToken.isEmpty()) {
-                builder.addHeader("Authorization", "Bearer " + accessToken);
-            }
 
             try (Response response = httpClient.newCall(builder.build()).execute()) {
                 if (response.body() != null) return response.body().string();
@@ -220,12 +238,10 @@ public class SupabaseClient {
                     .url(url)
                     .post(body)
                     .addHeader("apikey", anonKey)
+                    // Auth public request dùng anon key; thao tác DB dùng access token nếu đã login.
+                    .addHeader("Authorization", "Bearer " + (useAuth ? getBearerToken() : anonKey))
                     .addHeader("Content-Type", "application/json")
                     .addHeader("Prefer", "return=representation");
-
-            if (useAuth && accessToken != null && !accessToken.isEmpty()) {
-                builder.addHeader("Authorization", "Bearer " + accessToken);
-            }
 
             try (Response response = httpClient.newCall(builder.build()).execute()) {
                 if (response.body() != null) return response.body().string();
@@ -245,12 +261,10 @@ public class SupabaseClient {
                     .url(url)
                     .patch(body)
                     .addHeader("apikey", anonKey)
+                    // PATCH cập nhật dữ liệu nên ưu tiên access token của user hiện tại.
+                    .addHeader("Authorization", "Bearer " + getBearerToken())
                     .addHeader("Content-Type", "application/json")
                     .addHeader("Prefer", "return=representation");
-
-            if (accessToken != null && !accessToken.isEmpty()) {
-                builder.addHeader("Authorization", "Bearer " + accessToken);
-            }
 
             try (Response response = httpClient.newCall(builder.build()).execute()) {
                 if (response.body() != null) return response.body().string();
@@ -267,11 +281,9 @@ public class SupabaseClient {
                     .url(url)
                     .delete()
                     .addHeader("apikey", anonKey)
+                    // DELETE cũng cần token để Supabase kiểm tra policy/RLS.
+                    .addHeader("Authorization", "Bearer " + getBearerToken())
                     .addHeader("Content-Type", "application/json");
-
-            if (accessToken != null && !accessToken.isEmpty()) {
-                builder.addHeader("Authorization", "Bearer " + accessToken);
-            }
 
             try (Response response = httpClient.newCall(builder.build()).execute()) {
                 return response.isSuccessful() ? "success" : "error:" + response.code();
@@ -280,5 +292,10 @@ public class SupabaseClient {
             Log.e(TAG, "DELETE error: " + e.getMessage());
         }
         return null;
+    }
+
+    private String getBearerToken() {
+        // Nếu user chưa login thì dùng anon key cho request public như signup/login.
+        return accessToken != null && !accessToken.isEmpty() ? accessToken : anonKey;
     }
 }
