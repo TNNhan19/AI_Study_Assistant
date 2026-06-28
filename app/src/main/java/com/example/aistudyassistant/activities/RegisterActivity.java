@@ -96,13 +96,8 @@ public class RegisterActivity extends AppCompatActivity {
 
         final String finalFullName = fullName;
         new Thread(() -> {
-            // Build JSON with user metadata
-            String jsonBody = "{\"email\":\"" + email + "\","
-                    + "\"password\":\"" + password + "\","
-                    + "\"data\":{\"full_name\":\"" + finalFullName + "\"}}";
-
-            // Use Supabase signUp endpoint directly
-            String response = SupabaseClient.getInstance().signUp(email, password);
+            // Gửi fullName lên Supabase để lưu vào user_metadata.
+            String response = SupabaseClient.getInstance().signUp(email, password, finalFullName);
 
             runOnUiThread(() -> {
                 setLoading(false);
@@ -118,8 +113,9 @@ public class RegisterActivity extends AppCompatActivity {
         }
         try {
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
-            if (json.has("error")) {
-                String error = json.has("msg") ? json.get("msg").getAsString() : "Registration failed";
+            // Supabase có thể trả lỗi bằng nhiều field khác nhau tùy endpoint.
+            if (json.has("error") || json.has("code") || json.has("message")) {
+                String error = getErrorMessage(json);
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -130,6 +126,23 @@ public class RegisterActivity extends AppCompatActivity {
         } catch (Exception e) {
             Toast.makeText(this, "Registration error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private String getErrorMessage(JsonObject json) {
+        // Ưu tiên message cụ thể để dễ debug lỗi đăng ký.
+        if (json.has("msg") && !json.get("msg").isJsonNull()) {
+            return json.get("msg").getAsString();
+        }
+        if (json.has("error_description") && !json.get("error_description").isJsonNull()) {
+            return json.get("error_description").getAsString();
+        }
+        if (json.has("message") && !json.get("message").isJsonNull()) {
+            return json.get("message").getAsString();
+        }
+        if (json.has("error") && !json.get("error").isJsonNull()) {
+            return json.get("error").getAsString();
+        }
+        return "Registration failed";
     }
 
     private void setLoading(boolean loading) {
