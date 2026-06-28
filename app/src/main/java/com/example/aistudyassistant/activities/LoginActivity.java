@@ -111,11 +111,15 @@ public class LoginActivity extends AppCompatActivity {
         try {
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
-            if (json.has("error")) {
-                String error = json.get("error_description") != null
-                        ? json.get("error_description").getAsString()
-                        : "Login failed";
+            // Supabase có thể trả lỗi bằng error/code/message, không phải lúc nào cũng có access_token.
+            if (json.has("error") || json.has("code") || json.has("message")) {
+                String error = getErrorMessage(json);
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (!json.has("access_token") || !json.has("refresh_token") || !json.has("user")) {
+                Toast.makeText(this, "Login failed: invalid Supabase response", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -144,6 +148,23 @@ public class LoginActivity extends AppCompatActivity {
         } catch (Exception e) {
             Toast.makeText(this, "Login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private String getErrorMessage(JsonObject json) {
+        // Ưu tiên message cụ thể để biết lỗi do email chưa xác nhận, sai mật khẩu hay key.
+        if (json.has("msg") && !json.get("msg").isJsonNull()) {
+            return json.get("msg").getAsString();
+        }
+        if (json.has("error_description") && !json.get("error_description").isJsonNull()) {
+            return json.get("error_description").getAsString();
+        }
+        if (json.has("message") && !json.get("message").isJsonNull()) {
+            return json.get("message").getAsString();
+        }
+        if (json.has("error") && !json.get("error").isJsonNull()) {
+            return json.get("error").getAsString();
+        }
+        return "Login failed";
     }
 
     private void setLoading(boolean loading) {
