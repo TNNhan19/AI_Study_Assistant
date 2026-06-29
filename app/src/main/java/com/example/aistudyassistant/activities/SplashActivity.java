@@ -29,7 +29,7 @@ public class SplashActivity extends AppCompatActivity {
         if (prefs.isLoggedIn()) {
             // Khôi phục access token để request Supabase sau khi mở app vẫn qua RLS.
                     SupabaseClient.getInstance().setAccessToken(prefs.getAccessToken());
-            navigateTo(HomeActivity.class);
+            navigateTo(MainActivity.class);
         } else {
             navigateTo(LoginActivity.class);
         }

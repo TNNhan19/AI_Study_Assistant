@@ -46,6 +46,7 @@
         </activity>
 
         <!-- Main Screens -->
+        <activity android:name=".activities.MainActivity" />
         <activity android:name=".activities.HomeActivity" />
         <activity android:name=".activities.DocumentsActivity" />
         <activity android:name=".activities.DocumentDetailActivity" />
