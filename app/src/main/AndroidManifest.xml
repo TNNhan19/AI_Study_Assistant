@@ -25,12 +25,8 @@
         <!-- Auth Screens -->
         <activity
             android:name=".activities.LoginActivity"
-            android:exported="true"
+            android:exported="false"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
         <activity
             android:name=".activities.RegisterActivity"
@@ -39,7 +35,18 @@
             android:name=".activities.ForgotPasswordActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Splash -->
+        <activity
+            android:name=".activities.SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Main Screens -->
+        <activity android:name=".activities.MainActivity" />
         <activity android:name=".activities.HomeActivity" />
         <activity android:name=".activities.DocumentsActivity" />
         <activity android:name=".activities.DocumentDetailActivity" />
