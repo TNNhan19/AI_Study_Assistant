@@ -9,12 +9,19 @@ public class Constants {
 
     // Supabase Table Names
     public static final String TABLE_USERS = "users";
+    public static final String TABLE_PROJECTS = "projects";
+    public static final String TABLE_TOPICS = "topics";
     public static final String TABLE_DOCUMENTS = "documents";
     public static final String TABLE_SUMMARIES = "summaries";
+    public static final String TABLE_FLASHCARDS = "flashcards";
+    public static final String TABLE_QUIZZES = "quizzes";
     public static final String TABLE_QUIZ_QUESTIONS = "quiz_questions";
     public static final String TABLE_QUIZ_RESULTS = "quiz_results";
-    public static final String TABLE_FLASHCARDS = "flashcards";
+    public static final String TABLE_NOTES = "notes";
+    public static final String TABLE_STUDY_PLANS = "study_plans";
+    public static final String TABLE_REMINDERS = "reminders";
     public static final String TABLE_CHAT_MESSAGES = "chat_messages";
+    public static final String TABLE_CHAT_HISTORY = "chat_history";
     public static final String TABLE_SCHEDULES = "schedules";
 
     // Supabase Storage Bucket
