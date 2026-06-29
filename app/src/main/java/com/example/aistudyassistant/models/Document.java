@@ -3,12 +3,16 @@ package com.example.aistudyassistant.models;
 public class Document {
     private String id;
     private String userId;
+    private String projectId;
+    private String topicId;
     private String name;
-    private String fileUrl;
+    private String filePath;
     private String fileType;  // pdf, txt, docx
     private long fileSize;    // bytes
     private String status;    // UPLOADED, PROCESSING, COMPLETED, FAILED
+    private boolean favorite;
     private long createdAt;
+    private long updatedAt;
 
     public Document() {}
 
@@ -17,32 +21,44 @@ public class Document {
         this.id = id;
         this.userId = userId;
         this.name = name;
-        this.fileUrl = fileUrl;
+        // fileUrl cũ được map sang filePath vì bucket private lưu path thay vì public URL.
+        this.filePath = fileUrl;
         this.fileType = fileType;
         this.fileSize = fileSize;
         this.status = status;
         this.createdAt = System.currentTimeMillis();
+        this.updatedAt = this.createdAt;
     }
 
     // Getters
     public String getId() { return id; }
     public String getUserId() { return userId; }
+    public String getProjectId() { return projectId; }
+    public String getTopicId() { return topicId; }
     public String getName() { return name; }
-    public String getFileUrl() { return fileUrl; }
+    public String getFilePath() { return filePath; }
+    public String getFileUrl() { return filePath; }
     public String getFileType() { return fileType; }
     public long getFileSize() { return fileSize; }
     public String getStatus() { return status; }
+    public boolean isFavorite() { return favorite; }
     public long getCreatedAt() { return createdAt; }
+    public long getUpdatedAt() { return updatedAt; }
 
     // Setters
     public void setId(String id) { this.id = id; }
     public void setUserId(String userId) { this.userId = userId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
+    public void setTopicId(String topicId) { this.topicId = topicId; }
     public void setName(String name) { this.name = name; }
-    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
+    public void setFileUrl(String fileUrl) { this.filePath = fileUrl; }
     public void setFileType(String fileType) { this.fileType = fileType; }
     public void setFileSize(long fileSize) { this.fileSize = fileSize; }
     public void setStatus(String status) { this.status = status; }
+    public void setFavorite(boolean favorite) { this.favorite = favorite; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
 
     /** Converts bytes to a human-readable size string */
     public String getFileSizeFormatted() {
