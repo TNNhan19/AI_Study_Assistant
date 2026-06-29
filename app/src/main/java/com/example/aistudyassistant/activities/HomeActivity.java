@@ -13,8 +13,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.adapters.DocumentAdapter;
 import com.example.aistudyassistant.adapters.ScheduleAdapter;
+import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Schedule;
+import com.example.aistudyassistant.repositories.ProjectRepository;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -53,26 +55,34 @@ public class HomeActivity extends AppCompatActivity {
         setupBottomNavigation();
         loadData();
 
-        new Thread(() -> {
-            String userId = SharedPrefManager.getInstance(this).getUserId();
+        String userId = SharedPrefManager.getInstance(this).getUserId();
 
-            // Đảm bảo request test DB dùng access token của user đang login.
-            String accessToken = SharedPrefManager.getInstance(this).getAccessToken();
-            SupabaseClient.getInstance().setAccessToken(accessToken);
+        // Đảm bảo request test DB dùng access token của user đang login.
+        String accessToken = SharedPrefManager.getInstance(this).getAccessToken();
+        SupabaseClient.getInstance().setAccessToken(accessToken);
 
-            String json = "{"
-                    + "\"user_id\":\"" + userId + "\","
-                    + "\"name\":\"Test Project\","
-                    + "\"description\":\"Database policy test\""
-                    + "}";
+        ProjectRepository.getInstance().createProject(
+                userId,
+                "Test Project",
+                "Database policy test",
 
-            String result = SupabaseClient.getInstance()
-                    .insertIntoTable("projects", json);
-
-            runOnUiThread(() -> {
-                Toast.makeText(this, result != null ? result : "Project insert failed", Toast.LENGTH_LONG).show();
-            });
-        }).start();
+                new ApiCallback<String>(){
+                    @Override
+                    public void onSuccess(String result) {
+                        runOnUiThread(() ->
+                                Toast.makeText(HomeActivity.this, result,
+                                        Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() ->
+                                Toast.makeText(HomeActivity.this, errorMessage,
+                                        Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                }
+        );
     }
 
     private void initViews() {
