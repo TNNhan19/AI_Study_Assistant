@@ -75,7 +75,9 @@ public class ProfileActivity extends AppCompatActivity {
         new Thread(() -> {
             SupabaseClient.getInstance().signOut();
             runOnUiThread(() -> {
+                // xóa token trong RAM để request sau logout không dùng lại token cũ.
                 SharedPrefManager.getInstance(this).clearSession();
+                SupabaseClient.getInstance().setAccessToken(null);  //thêm reset access token sau khi logout
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
