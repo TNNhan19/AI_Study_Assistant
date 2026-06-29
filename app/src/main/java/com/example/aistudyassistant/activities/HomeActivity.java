@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -17,6 +18,7 @@ import com.example.aistudyassistant.models.Schedule;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.example.aistudyassistant.api.SupabaseClient;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -50,6 +52,27 @@ public class HomeActivity extends AppCompatActivity {
         setupRecyclerViews();
         setupBottomNavigation();
         loadData();
+
+        new Thread(() -> {
+            String userId = SharedPrefManager.getInstance(this).getUserId();
+
+            // Đảm bảo request test DB dùng access token của user đang login.
+            String accessToken = SharedPrefManager.getInstance(this).getAccessToken();
+            SupabaseClient.getInstance().setAccessToken(accessToken);
+
+            String json = "{"
+                    + "\"user_id\":\"" + userId + "\","
+                    + "\"name\":\"Test Project\","
+                    + "\"description\":\"Database policy test\""
+                    + "}";
+
+            String result = SupabaseClient.getInstance()
+                    .insertIntoTable("projects", json);
+
+            runOnUiThread(() -> {
+                Toast.makeText(this, result != null ? result : "Project insert failed", Toast.LENGTH_LONG).show();
+            });
+        }).start();
     }
 
     private void initViews() {

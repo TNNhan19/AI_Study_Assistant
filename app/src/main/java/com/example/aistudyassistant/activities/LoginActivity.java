@@ -31,8 +31,11 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Check if already logged in → skip to Home
         if (SharedPrefManager.getInstance(this).isLoggedIn()) {
+            // Khôi phục access token để các request Supabase sau khi mở lại app vẫn qua RLS.
+            String accessToken = SharedPrefManager.getInstance(this).getAccessToken();
+            SupabaseClient.getInstance().setAccessToken(accessToken);
+
             navigateToHome();
             return;
         }
