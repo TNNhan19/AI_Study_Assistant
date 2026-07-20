@@ -70,6 +70,15 @@
         <activity android:name=".activities.ProfileActivity" />
         <activity android:name=".activities.EditProfileActivity" />
         <activity android:name=".activities.SearchActivity" />
+        <activity android:name=".activities.ProgressActivity" />
+
+        <!-- Content Management (Projects, Topics, Notes) -->
+        <activity android:name=".activities.ProjectsActivity" />
+        <activity android:name=".activities.TopicsActivity" />
+        <activity android:name=".activities.NotesActivity" />
+        <activity
+            android:name=".activities.EditNoteActivity"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Broadcast Receivers -->
         <receiver

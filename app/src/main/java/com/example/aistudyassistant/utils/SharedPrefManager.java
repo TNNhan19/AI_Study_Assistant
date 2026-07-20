@@ -98,4 +98,44 @@ public class SharedPrefManager {
     public boolean getBoolean(String key, boolean defaultValue) {
         return prefs.getBoolean(key, defaultValue);
     }
+
+    // ===================== Recent Documents =====================
+
+    private static final String KEY_RECENT_DOCS = "recent_documents";
+    private static final int MAX_RECENT_DOCS = 10;
+
+    public void addRecentDocument(String documentId) {
+        if (documentId == null || documentId.isEmpty()) return;
+        
+        String recentStr = prefs.getString(KEY_RECENT_DOCS, "");
+        java.util.List<String> recentList = new java.util.ArrayList<>();
+        if (!recentStr.isEmpty()) {
+            recentList.addAll(java.util.Arrays.asList(recentStr.split(",")));
+        }
+        
+        // Remove if already exists to move to top
+        recentList.remove(documentId);
+        
+        // Add to front
+        recentList.add(0, documentId);
+        
+        // Trim if too many
+        if (recentList.size() > MAX_RECENT_DOCS) {
+            recentList = recentList.subList(0, MAX_RECENT_DOCS);
+        }
+        
+        // Join and save
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < recentList.size(); i++) {
+            sb.append(recentList.get(i));
+            if (i < recentList.size() - 1) sb.append(",");
+        }
+        prefs.edit().putString(KEY_RECENT_DOCS, sb.toString()).apply();
+    }
+
+    public java.util.List<String> getRecentDocumentIds() {
+        String recentStr = prefs.getString(KEY_RECENT_DOCS, "");
+        if (recentStr.isEmpty()) return new java.util.ArrayList<>();
+        return new java.util.ArrayList<>(java.util.Arrays.asList(recentStr.split(",")));
+    }
 }

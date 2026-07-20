@@ -13,14 +13,78 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@color/surface"
         android:elevation="4dp">
-        <TextView
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="My Documents"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_xl"
+                android:fontFamily="sans-serif-medium"
+                android:layout_centerVertical="true"/>
+            <ImageButton
+                android:id="@+id/btn_filter"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@android:drawable/ic_menu_manage"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/text_primary"
+                android:layout_alignParentEnd="true"
+                android:layout_marginEnd="@dimen/spacing_sm"
+                android:contentDescription="Filter"/>
+        </RelativeLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- Filter Chips -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:scrollbars="none"
+        android:paddingStart="@dimen/spacing_md"
+        android:paddingEnd="@dimen/spacing_md"
+        android:paddingBottom="@dimen/spacing_sm">
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_filters"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="My Documents"
-            android:textColor="@color/text_primary"
-            android:textSize="@dimen/text_xl"
-            android:fontFamily="sans-serif-medium"/>
-    </androidx.appcompat.widget.Toolbar>
+            app:singleSelection="true"
+            app:selectionRequired="false">
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_all"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All"
+                android:checked="true"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_favorites"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Favorites"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_pdf"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PDF"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_docx"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DOCX"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_txt"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TXT"/>
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
 
     <!-- Search Bar -->
     <LinearLayout

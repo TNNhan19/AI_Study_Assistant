@@ -28,6 +28,7 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
     public interface OnDocumentClickListener {
         void onDocumentClick(Document document);
         void onDocumentMoreClick(Document document, View anchorView);
+        void onFavoriteClick(Document document);
     }
 
     public DocumentAdapter(Context context, List<Document> documents) {
@@ -70,7 +71,7 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
 
     class DocumentViewHolder extends RecyclerView.ViewHolder {
         TextView tvFileTypeIcon, tvDocName, tvDocSize, tvDocDate, tvStatus;
-        ImageButton btnMore;
+        ImageButton btnMore, btnFavorite;
 
         DocumentViewHolder(View itemView) {
             super(itemView);
@@ -80,6 +81,7 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
             tvDocDate = itemView.findViewById(R.id.tv_doc_date);
             tvStatus = itemView.findViewById(R.id.tv_status);
             btnMore = itemView.findViewById(R.id.btn_more);
+            btnFavorite = itemView.findViewById(R.id.btn_favorite);
         }
 
         void bind(Document doc) {
@@ -94,12 +96,24 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
             // Status badge
             setStatusBadge(doc.getStatus());
 
+            // Favorite star icon
+            if (doc.isFavorite()) {
+                btnFavorite.setImageResource(android.R.drawable.btn_star_big_on);
+                btnFavorite.setImageTintList(android.content.res.ColorStateList.valueOf(context.getResources().getColor(R.color.primary)));
+            } else {
+                btnFavorite.setImageResource(android.R.drawable.btn_star_big_off);
+                btnFavorite.setImageTintList(android.content.res.ColorStateList.valueOf(context.getResources().getColor(R.color.text_secondary)));
+            }
+
             // Click listeners
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onDocumentClick(doc);
             });
             btnMore.setOnClickListener(v -> {
                 if (listener != null) listener.onDocumentMoreClick(doc, v);
+            });
+            btnFavorite.setOnClickListener(v -> {
+                if (listener != null) listener.onFavoriteClick(doc);
             });
         }
 

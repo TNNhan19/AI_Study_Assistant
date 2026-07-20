@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -35,15 +36,23 @@ public class DocumentsActivity extends AppCompatActivity {
     private FloatingActionButton fabUpload;
     private TextInputEditText etSearch;
     private BottomNavigationView bottomNavigation;
+    private com.google.android.material.chip.ChipGroup chipGroupFilters;
 
     private DocumentAdapter adapter;
     private final List<Document> allDocuments = new ArrayList<>();
     private final List<Document> filteredDocuments = new ArrayList<>();
+    
+    private String projectId, topicId, topicName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_documents);
+
+        projectId = getIntent().getStringExtra("project_id");
+        topicId = getIntent().getStringExtra("topic_id");
+        topicName = getIntent().getStringExtra("topic_name");
+
         initViews();
         setupRecyclerView();
         setupSearch();
@@ -58,9 +67,47 @@ public class DocumentsActivity extends AppCompatActivity {
         fabUpload = findViewById(R.id.fab_upload);
         etSearch = findViewById(R.id.et_search);
         bottomNavigation = findViewById(R.id.bottom_navigation);
+        chipGroupFilters = findViewById(R.id.chip_group_filters);
 
-        fabUpload.setOnClickListener(v ->
-                startActivity(new Intent(this, UploadDocumentActivity.class)));
+        // Hiển thị tên Topic nếu đang lọc
+        if (topicName != null) {
+            ((TextView)findViewById(R.id.toolbar).findViewById(android.R.id.text1)).setText(topicName);
+        }
+
+        fabUpload.setOnClickListener(v -> {
+            Intent intent = new Intent(this, UploadDocumentActivity.class);
+            if (projectId != null) intent.putExtra("project_id", projectId);
+            if (topicId != null) intent.putExtra("topic_id", topicId);
+            startActivity(intent);
+        });
+        
+        findViewById(R.id.btn_filter).setOnClickListener(v -> showFilterOptions());
+        
+        chipGroupFilters.setOnCheckedChangeListener((group, checkedId) -> applyFilters());
+    }
+
+    private void showFilterOptions() {
+        String[] options = {"Sort by Name", "Sort by Date (Newest)", "Sort by Date (Oldest)", "Sort by Size"};
+        new AlertDialog.Builder(this)
+                .setTitle("Sort Documents")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Name
+                            java.util.Collections.sort(allDocuments, (d1, d2) -> d1.getName().compareToIgnoreCase(d2.getName()));
+                            break;
+                        case 1: // Date Newest
+                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d2.getCreatedAt(), d1.getCreatedAt()));
+                            break;
+                        case 2: // Date Oldest
+                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d1.getCreatedAt(), d2.getCreatedAt()));
+                            break;
+                        case 3: // Size
+                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d2.getFileSize(), d1.getFileSize()));
+                            break;
+                    }
+                    applyFilters();
+                })
+                .show();
     }
 
     private void setupRecyclerView() {
@@ -68,6 +115,9 @@ public class DocumentsActivity extends AppCompatActivity {
         adapter.setListener(new DocumentAdapter.OnDocumentClickListener() {
             @Override
             public void onDocumentClick(Document document) {
+                // Track as recently viewed
+                com.example.aistudyassistant.utils.SharedPrefManager.getInstance(DocumentsActivity.this).addRecentDocument(document.getId());
+                
                 Intent intent = new Intent(DocumentsActivity.this, DocumentDetailActivity.class);
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
@@ -79,35 +129,76 @@ public class DocumentsActivity extends AppCompatActivity {
             public void onDocumentMoreClick(Document document, View anchorView) {
                 showDocumentPopupMenu(document, anchorView);
             }
+
+            @Override
+            public void onFavoriteClick(Document document) {
+                toggleFavorite(document);
+            }
         });
         rvDocuments.setLayoutManager(new LinearLayoutManager(this));
         rvDocuments.setAdapter(adapter);
+    }
+
+    private void toggleFavorite(Document document) {
+        boolean newState = !document.isFavorite();
+        com.example.aistudyassistant.repositories.DocumentRepository.getInstance().toggleFavorite(document.getId(), newState, new com.example.aistudyassistant.api.ApiCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean result) {
+                runOnUiThread(() -> {
+                    document.setFavorite(newState);
+                    adapter.notifyDataSetChanged();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> Toast.makeText(DocumentsActivity.this, errorMessage, Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void applyFilters() {
+        String query = etSearch.getText() != null ? etSearch.getText().toString().toLowerCase() : "";
+        int checkedChipId = chipGroupFilters.getCheckedChipId();
+        
+        filteredDocuments.clear();
+        for (Document doc : allDocuments) {
+            boolean matchesSearch = doc.getName().toLowerCase().contains(query);
+            boolean matchesChip = true;
+            
+            if (checkedChipId == R.id.chip_favorites) matchesChip = doc.isFavorite();
+            else if (checkedChipId == R.id.chip_pdf) matchesChip = "pdf".equalsIgnoreCase(doc.getFileType());
+            else if (checkedChipId == R.id.chip_docx) matchesChip = "docx".equalsIgnoreCase(doc.getFileType());
+            else if (checkedChipId == R.id.chip_txt) matchesChip = "txt".equalsIgnoreCase(doc.getFileType());
+            
+            if (matchesSearch && matchesChip) {
+                filteredDocuments.add(doc);
+            }
+        }
+
+        // Ưu tiên đẩy Đánh dấu sao lên đầu
+        java.util.Collections.sort(filteredDocuments, (d1, d2) -> {
+            if (d1.isFavorite() && !d2.isFavorite()) return -1;
+            if (!d1.isFavorite() && d2.isFavorite()) return 1;
+            return Long.compare(d2.getCreatedAt(), d1.getCreatedAt()); // Sắp xếp theo ngày mới nhất
+        });
+
+        adapter.notifyDataSetChanged();
+        updateEmptyState();
     }
 
     private void setupSearch() {
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterDocuments(s.toString());
+                applyFilters();
             }
             @Override public void afterTextChanged(Editable s) {}
         });
     }
 
     private void filterDocuments(String query) {
-        filteredDocuments.clear();
-        if (query.isEmpty()) {
-            filteredDocuments.addAll(allDocuments);
-        } else {
-            String lower = query.toLowerCase();
-            for (Document doc : allDocuments) {
-                if (doc.getName().toLowerCase().contains(lower)) {
-                    filteredDocuments.add(doc);
-                }
-            }
-        }
-        adapter.notifyDataSetChanged();
-        updateEmptyState();
+        applyFilters();
     }
 
     private void showDocumentPopupMenu(Document document, View anchorView) {
@@ -140,12 +231,28 @@ public class DocumentsActivity extends AppCompatActivity {
     }
 
     private void deleteDocument(Document document) {
-        // TODO: Call SupabaseClient to delete document
-        allDocuments.remove(document);
-        filteredDocuments.remove(document);
-        adapter.notifyDataSetChanged();
-        updateEmptyState();
-        Toast.makeText(this, "Document deleted", Toast.LENGTH_SHORT).show();
+        setLoading(true);
+        com.example.aistudyassistant.repositories.DocumentRepository.getInstance().deleteDocument(document, new com.example.aistudyassistant.api.ApiCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean result) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    allDocuments.remove(document);
+                    filteredDocuments.remove(document);
+                    adapter.notifyDataSetChanged();
+                    updateEmptyState();
+                    Toast.makeText(DocumentsActivity.this, "Document deleted", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(DocumentsActivity.this, "Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
     }
 
     private void setupBottomNavigation() {
@@ -175,21 +282,39 @@ public class DocumentsActivity extends AppCompatActivity {
     }
 
     private void loadDocuments() {
-        setLoading(true);
-        // TODO: Load documents from Supabase
-        // String userId = SharedPrefManager.getInstance(this).getUserId();
-        // new Thread(() -> {
-        //     String response = SupabaseClient.getInstance().getFromTable(
-        //         Constants.TABLE_DOCUMENTS, "user_id=eq." + userId + "&order=created_at.desc");
-        //     runOnUiThread(() -> {
-        //         setLoading(false);
-        //         parseAndDisplayDocuments(response);
-        //     });
-        // }).start();
+        String userId = com.example.aistudyassistant.utils.SharedPrefManager.getInstance(this).getUserId();
+        if (userId == null) return;
 
-        // For now, show empty state
-        setLoading(false);
-        updateEmptyState();
+        setLoading(true);
+        com.example.aistudyassistant.repositories.DocumentRepository.getInstance().getAllDocuments(userId, new com.example.aistudyassistant.api.ApiCallback<List<Document>>() {
+            @Override
+            public void onSuccess(List<Document> result) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    allDocuments.clear();
+                    
+                    // Lọc theo Topic hoặc Project nếu có (Phân cấp chặt chẽ)
+                    for (Document doc : result) {
+                        boolean match = true;
+                        if (topicId != null && !topicId.equals(doc.getTopicId())) match = false;
+                        else if (projectId != null && !projectId.equals(doc.getProjectId())) match = false;
+                        
+                        if (match) allDocuments.add(doc);
+                    }
+                    
+                    applyFilters();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(DocumentsActivity.this, "Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+                    updateEmptyState();
+                });
+            }
+        });
     }
 
     private void setLoading(boolean loading) {

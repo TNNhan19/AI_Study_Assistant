@@ -98,6 +98,36 @@
                     android:inputType="text"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Project Selection -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_project"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_md"
+                android:hint="Select Project (optional)">
+                <AutoCompleteTextView
+                    android:id="@+id/actv_project"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Topic Selection -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_topic"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_md"
+                android:hint="Select Topic (optional)">
+                <AutoCompleteTextView
+                    android:id="@+id/actv_topic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Upload Progress -->
             <LinearLayout
                 android:id="@+id/layout_progress"

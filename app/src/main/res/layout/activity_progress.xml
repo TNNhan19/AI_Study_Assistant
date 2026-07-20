@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Header -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        android:elevation="4dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <ImageButton android:id="@+id/btn_back"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:src="@android:drawable/ic_media_previous"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/text_primary" android:contentDescription="Back"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Study Progress" android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_xl" android:fontFamily="sans-serif-medium"
+                android:paddingStart="@dimen/spacing_sm"/>
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg">
+
+            <!-- Summary Stats Grid -->
+            <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:columnCount="2" android:rowCount="2" android:useDefaultMargins="true">
+
+                <androidx.cardview.widget.CardView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp" app:cardBackgroundColor="@color/surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/spacing_md" android:gravity="center">
+                        <TextView android:id="@+id/tv_count_docs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textColor="@color/primary" android:fontFamily="sans-serif-black"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Documents" android:textSize="@dimen/text_sm" android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp" app:cardBackgroundColor="@color/surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/spacing_md" android:gravity="center">
+                        <TextView android:id="@+id/tv_count_summaries" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textColor="@color/secondary" android:fontFamily="sans-serif-black"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Summaries" android:textSize="@dimen/text_sm" android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp" app:cardBackgroundColor="@color/surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/spacing_md" android:gravity="center">
+                        <TextView android:id="@+id/tv_count_flashcards" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textColor="#FF9800" android:fontFamily="sans-serif-black"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Flashcards" android:textSize="@dimen/text_sm" android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp" app:cardBackgroundColor="@color/surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/spacing_md" android:gravity="center">
+                        <TextView android:id="@+id/tv_avg_quiz" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0%" android:textSize="24sp" android:textColor="#4CAF50" android:fontFamily="sans-serif-black"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg Quiz Score" android:textSize="@dimen/text_sm" android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </GridLayout>
+
+            <!-- Progress Chart Placeholder -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Quiz Performance" android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_lg" android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="@dimen/spacing_lg" android:paddingBottom="@dimen/spacing_sm"/>
+
+            <androidx.cardview.widget.CardView android:layout_width="match_parent" android:layout_height="200dp"
+                app:cardCornerRadius="@dimen/card_radius" app:cardElevation="2dp" app:cardBackgroundColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center">
+                    <!-- In a real app, use a Chart library like MPAndroidChart -->
+                    <ProgressBar android:id="@+id/progress_quiz_performance" style="?android:attr/progressBarStyleHorizontal" android:layout_width="200dp" android:layout_height="wrap_content" android:max="100" android:progress="0" android:scaleY="4"/>
+                    <TextView android:id="@+id/tv_performance_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Loading data..." android:textColor="@color/text_secondary" android:layout_marginTop="@dimen/spacing_md"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Weak Topics -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Topics to Improve" android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_lg" android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="@dimen/spacing_lg" android:paddingBottom="@dimen/spacing_sm"/>
+
+            <LinearLayout android:id="@+id/layout_weak_topics" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <!-- Dynamic topic items added here -->
+            </LinearLayout>
+
+            <TextView android:id="@+id/tv_no_weak_topics" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="You're doing great! No weak topics identified yet." android:textColor="@color/text_secondary" android:gravity="center" android:padding="@dimen/spacing_lg" android:visibility="gone"/>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
