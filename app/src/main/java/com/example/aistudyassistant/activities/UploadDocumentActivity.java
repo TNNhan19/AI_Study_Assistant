@@ -20,8 +20,13 @@ import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import com.example.aistudyassistant.models.Project;
+import com.example.aistudyassistant.models.Topic;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UploadDocumentActivity extends AppCompatActivity {
 
@@ -29,13 +34,19 @@ public class UploadDocumentActivity extends AppCompatActivity {
     private TextView tvFileName, tvFileSize, tvUploadStatus, tvUploadPercent;
     private LinearLayout layoutProgress;
     private ProgressBar progressUpload;
-    private MaterialButton btnUpload, btnRemoveFile;
-    private ImageButton btnBack;
+    private MaterialButton btnUpload;
+    private ImageButton btnBack, btnRemoveFile;
     private TextInputEditText etDocTitle;
+    private android.widget.AutoCompleteTextView actvProject, actvTopic;
 
     private Uri selectedFileUri;
     private String selectedFileName;
     private long selectedFileSize;
+    
+    private List<Project> projectList = new ArrayList<>();
+    private List<Topic> topicList = new ArrayList<>();
+    private String selectedProjectId = null;
+    private String selectedTopicId = null;
 
     private final ActivityResultLauncher<String[]> filePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -62,8 +73,13 @@ public class UploadDocumentActivity extends AppCompatActivity {
         layoutProgress = findViewById(R.id.layout_progress);
         progressUpload = findViewById(R.id.progress_upload);
         btnUpload = findViewById(R.id.btn_upload);
+        btnRemoveFile = findViewById(R.id.btn_remove_file);
         btnBack = findViewById(R.id.btn_back);
         etDocTitle = findViewById(R.id.et_doc_title);
+        actvProject = findViewById(R.id.actv_project);
+        actvTopic = findViewById(R.id.actv_topic);
+        
+        loadProjectsForDropdown();
     }
 
     private void setupClickListeners() {
@@ -74,30 +90,99 @@ public class UploadDocumentActivity extends AppCompatActivity {
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
 
         btnUpload.setOnClickListener(v -> uploadDocument());
+
+        btnRemoveFile.setOnClickListener(v -> {
+            selectedFileUri = null;
+            selectedFileName = null;
+            selectedFileSize = 0;
+            cardFileInfo.setVisibility(View.GONE);
+            cardDropZone.setVisibility(View.VISIBLE);
+            etDocTitle.setText("");
+        });
     }
 
     private void handleFileSelected(Uri uri) {
-        try {
-            selectedFileUri = uri;
+        selectedFileUri = uri;
+        String fileName = "document";
+        long fileSize = 0;
 
-            // Get file name from URI
-            String path = uri.getPath();
-            selectedFileName = path != null ? path.substring(path.lastIndexOf('/') + 1) : "document.pdf";
-
-            // Get file size
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            selectedFileSize = inputStream != null ? inputStream.available() : 0;
-            if (inputStream != null) inputStream.close();
-
-            // Show file info card
-            tvFileName.setText(selectedFileName);
-            tvFileSize.setText(formatFileSize(selectedFileSize));
-            cardDropZone.setVisibility(View.GONE);
-            cardFileInfo.setVisibility(View.VISIBLE);
-
-        } catch (IOException e) {
-            Toast.makeText(this, "Could not read file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        // Use ContentResolver to get file name and size
+        try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                int sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE);
+                if (nameIndex != -1) fileName = cursor.getString(nameIndex);
+                if (sizeIndex != -1) fileSize = cursor.getLong(sizeIndex);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        selectedFileName = fileName;
+        selectedFileSize = fileSize;
+
+        // Show file info card
+        tvFileName.setText(selectedFileName);
+        tvFileSize.setText(formatFileSize(selectedFileSize));
+        etDocTitle.setText(selectedFileName);
+        cardDropZone.setVisibility(View.GONE);
+        cardFileInfo.setVisibility(View.VISIBLE);
+    }
+
+    private void loadProjectsForDropdown() {
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId.isEmpty()) return;
+        
+        com.example.aistudyassistant.repositories.ProjectRepository.getInstance().getAllProjects(userId, new com.example.aistudyassistant.api.ApiCallback<List<Project>>() {
+            @Override
+            public void onSuccess(List<Project> result) {
+                projectList = result;
+                List<String> names = new ArrayList<>();
+                names.add("None");
+                for (Project p : result) names.add(p.getName());
+                
+                runOnUiThread(() -> {
+                    android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(UploadDocumentActivity.this, android.R.layout.simple_dropdown_item_1line, names);
+                    actvProject.setAdapter(adapter);
+                    actvProject.setOnItemClickListener((parent, view, position, id) -> {
+                        if (position == 0) {
+                            selectedProjectId = null;
+                            selectedTopicId = null;
+                            topicList.clear();
+                            actvTopic.setAdapter(null);
+                            actvTopic.setText("");
+                        } else {
+                            selectedProjectId = projectList.get(position - 1).getId();
+                            selectedTopicId = null;
+                            actvTopic.setText("");
+                            loadTopicsForDropdown(selectedProjectId);
+                        }
+                    });
+                });
+            }
+            @Override public void onError(String errorMessage) {}
+        });
+    }
+
+    private void loadTopicsForDropdown(String projectId) {
+        com.example.aistudyassistant.repositories.TopicRepository.getInstance().getTopicsByProject(projectId, new com.example.aistudyassistant.api.ApiCallback<List<Topic>>() {
+            @Override
+            public void onSuccess(List<Topic> result) {
+                topicList = result;
+                List<String> names = new ArrayList<>();
+                names.add("None");
+                for (Topic t : result) names.add(t.getName());
+                
+                runOnUiThread(() -> {
+                    android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(UploadDocumentActivity.this, android.R.layout.simple_dropdown_item_1line, names);
+                    actvTopic.setAdapter(adapter);
+                    actvTopic.setOnItemClickListener((parent, view, position, id) -> {
+                        selectedTopicId = (position == 0) ? null : topicList.get(position - 1).getId();
+                    });
+                });
+            }
+            @Override public void onError(String errorMessage) {}
+        });
     }
 
     private void uploadDocument() {
@@ -109,7 +194,13 @@ public class UploadDocumentActivity extends AppCompatActivity {
         String title = etDocTitle.getText() != null ? etDocTitle.getText().toString().trim() : "";
         if (title.isEmpty()) title = selectedFileName;
 
-        final String docTitle = title;
+        final String finalTitle = title;
+        final String userId = com.example.aistudyassistant.utils.SharedPrefManager.getInstance(this).getUserId();
+
+        if (userId == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         setUploading(true);
 
@@ -128,30 +219,48 @@ public class UploadDocumentActivity extends AppCompatActivity {
                 byte[] fileBytes = inputStream.readAllBytes();
                 inputStream.close();
 
-                // TODO: Upload to Supabase Storage
-                // String userId = SharedPrefManager.getInstance(this).getUserId();
-                // String storagePath = userId + "/" + System.currentTimeMillis() + "_" + selectedFileName;
-                // String uploadResult = SupabaseClient.getInstance().uploadFile(
-                //     Constants.STORAGE_BUCKET, storagePath, fileBytes, "application/pdf");
-                //
-                // String fileUrl = SupabaseClient.getInstance().getFilePublicUrl(
-                //     Constants.STORAGE_BUCKET, storagePath);
-                //
-                // Then insert document record into database
-                // Then call GeminiClient to process the document
+                // Prepare Document model
+                com.example.aistudyassistant.models.Document doc = new com.example.aistudyassistant.models.Document();
+                doc.setUserId(userId);
+                doc.setName(finalTitle);
+                doc.setFileSize(selectedFileSize);
+                doc.setProjectId(selectedProjectId);
+                doc.setTopicId(selectedTopicId);
+                
+                // Determine file type from extension
+                String extension = "";
+                int i = selectedFileName.lastIndexOf('.');
+                if (i > 0) extension = selectedFileName.substring(i + 1).toLowerCase();
+                doc.setFileType(extension);
 
-                runOnUiThread(() -> {
-                    setUploading(false);
-                    Toast.makeText(this,
-                            "Document uploaded! AI processing started.",
-                            Toast.LENGTH_SHORT).show();
-                    finish();
+                // Define storage path: userId/timestamp_filename
+                String storagePath = userId + "/" + System.currentTimeMillis() + "_" + selectedFileName;
+                doc.setFilePath(storagePath);
+
+                // Call Repository to upload
+                com.example.aistudyassistant.repositories.DocumentRepository.getInstance().uploadDocument(doc, fileBytes, new com.example.aistudyassistant.api.ApiCallback<com.example.aistudyassistant.models.Document>() {
+                    @Override
+                    public void onSuccess(com.example.aistudyassistant.models.Document result) {
+                        runOnUiThread(() -> {
+                            setUploading(false);
+                            Toast.makeText(UploadDocumentActivity.this, "Document uploaded successfully!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        });
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() -> {
+                            setUploading(false);
+                            Toast.makeText(UploadDocumentActivity.this, "Upload failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        });
+                    }
                 });
 
             } catch (IOException e) {
                 runOnUiThread(() -> {
                     setUploading(false);
-                    Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Error reading file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();

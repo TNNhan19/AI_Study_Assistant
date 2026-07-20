@@ -9,15 +9,19 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.adapters.DocumentAdapter;
-import com.example.aistudyassistant.models.Document;
+import com.example.aistudyassistant.adapters.SearchResultAdapter;
+import com.example.aistudyassistant.models.SearchResult;
+import com.example.aistudyassistant.repositories.SearchRepository;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
@@ -35,14 +39,16 @@ public class SearchActivity extends AppCompatActivity {
     private TextView tvResultsCount, tvClearAll;
     private ProgressBar progressBar;
 
-    private DocumentAdapter adapter;
-    private final List<Document> searchResults = new ArrayList<>();
+    private SearchResultAdapter adapter;
+    private final List<SearchResult> searchResults = new ArrayList<>();
     private final List<String> recentSearches = new ArrayList<>();
+    private SearchRepository repository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
+        repository = SearchRepository.getInstance();
         initViews();
         setupSearch();
         loadRecentSearches();
@@ -64,20 +70,49 @@ public class SearchActivity extends AppCompatActivity {
         tvClearAll.setOnClickListener(v -> clearRecentSearches());
 
         // Setup RecyclerView
-        adapter = new DocumentAdapter(this, searchResults);
-        adapter.setListener(new DocumentAdapter.OnDocumentClickListener() {
-            @Override
-            public void onDocumentClick(Document document) {
-                Intent intent = new Intent(SearchActivity.this, DocumentDetailActivity.class);
-                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                startActivity(intent);
-            }
-            @Override
-            public void onDocumentMoreClick(Document document, View anchorView) {}
-        });
+        adapter = new SearchResultAdapter(this, searchResults);
+        adapter.setListener(result -> handleResultClick(result));
         rvResults.setLayoutManager(new LinearLayoutManager(this));
         rvResults.setAdapter(adapter);
+    }
+
+    private void handleResultClick(SearchResult result) {
+        Intent intent;
+        switch (result.getType()) {
+            case DOCUMENT:
+                intent = new Intent(this, DocumentDetailActivity.class);
+                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, result.getId());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, result.getTitle());
+                startActivity(intent);
+                break;
+            case PROJECT:
+                intent = new Intent(this, TopicsActivity.class);
+                intent.putExtra("project_id", result.getId());
+                intent.putExtra("project_name", result.getTitle());
+                startActivity(intent);
+                break;
+            case TOPIC:
+                // For simplicity, we just toast for now or you could open a specific view
+                Toast.makeText(this, "Topic: " + result.getTitle(), Toast.LENGTH_SHORT).show();
+                break;
+            case NOTE:
+                intent = new Intent(this, EditNoteActivity.class);
+                intent.putExtra("note_id", result.getId());
+                intent.putExtra("note_title", result.getTitle());
+                intent.putExtra("note_content", result.getSubtitle());
+                startActivity(intent);
+                break;
+            case FLASHCARD:
+                intent = new Intent(this, FlashcardsActivity.class);
+                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, result.getId()); // In real app, might need more context
+                startActivity(intent);
+                break;
+            case QUIZ:
+                intent = new Intent(this, QuizActivity.class);
+                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, result.getId());
+                startActivity(intent);
+                break;
+        }
     }
 
     private void setupSearch() {
@@ -88,7 +123,7 @@ public class SearchActivity extends AppCompatActivity {
                 String query = s.toString().trim();
                 if (query.isEmpty()) {
                     showState("recent");
-                } else {
+                } else if (query.length() >= 2) {
                     performSearch(query);
                 }
             }
@@ -97,33 +132,58 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void performSearch(String query) {
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId.isEmpty()) return;
+
         showState("loading");
 
-        // TODO: Search documents in Supabase
-        // new Thread(() -> {
-        //     String userId = SharedPrefManager.getInstance(this).getUserId();
-        //     String response = SupabaseClient.getInstance().getFromTable(
-        //         Constants.TABLE_DOCUMENTS,
-        //         "user_id=eq." + userId + "&name=ilike.*" + query + "*");
-        //     runOnUiThread(() -> {
-        //         parseAndDisplayResults(response);
-        //     });
-        // }).start();
+        repository.globalSearch(userId, query, new ApiCallback<List<SearchResult>>() {
+            @Override
+            public void onSuccess(List<SearchResult> result) {
+                runOnUiThread(() -> {
+                    searchResults.clear();
+                    searchResults.addAll(result);
+                    adapter.notifyDataSetChanged();
+                    showState(searchResults.isEmpty() ? "empty" : "results");
+                });
+            }
 
-        // Save recent search
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    Toast.makeText(SearchActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                    showState("empty");
+                });
+            }
+        });
+
+        // Save to recent
         if (!recentSearches.contains(query)) {
             recentSearches.add(0, query);
-            if (recentSearches.size() > 10) recentSearches.remove(recentSearches.size() - 1);
+            if (recentSearches.size() > 8) recentSearches.remove(recentSearches.size() - 1);
+            saveRecentSearches();
         }
-
-        // Show empty for now (no API)
-        searchResults.clear();
-        adapter.notifyDataSetChanged();
-        showState(searchResults.isEmpty() ? "empty" : "results");
     }
 
     private void loadRecentSearches() {
-        // TODO: Load from SharedPreferences
+        String saved = SharedPrefManager.getInstance(this).getString("recent_queries", "");
+        if (!saved.isEmpty()) {
+            recentSearches.clear();
+            for (String q : saved.split("\\|")) {
+                if (!q.isEmpty()) recentSearches.add(q);
+            }
+        }
+        updateRecentChips();
+    }
+
+    private void saveRecentSearches() {
+        StringBuilder sb = new StringBuilder();
+        for (String q : recentSearches) sb.append(q).append("|");
+        SharedPrefManager.getInstance(this).putString("recent_queries", sb.toString());
+        updateRecentChips();
+    }
+
+    private void updateRecentChips() {
         chipGroupRecent.removeAllViews();
         for (String search : recentSearches) {
             addRecentChip(search);
@@ -134,21 +194,20 @@ public class SearchActivity extends AppCompatActivity {
         Chip chip = new Chip(this);
         chip.setText(text);
         chip.setCloseIconVisible(true);
-        chip.setChipBackgroundColorResource(R.color.surface_variant);
         chip.setOnClickListener(v -> {
             etSearch.setText(text);
             etSearch.setSelection(text.length());
         });
         chip.setOnCloseIconClickListener(v -> {
             recentSearches.remove(text);
-            chipGroupRecent.removeView(chip);
+            saveRecentSearches();
         });
         chipGroupRecent.addView(chip);
     }
 
     private void clearRecentSearches() {
         recentSearches.clear();
-        chipGroupRecent.removeAllViews();
+        saveRecentSearches();
     }
 
     private void showState(String state) {

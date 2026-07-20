@@ -60,6 +60,9 @@ public class ProfileActivity extends AppCompatActivity {
                 startActivity(new Intent(this, EditProfileActivity.class)));
 
         btnLogout.setOnClickListener(v -> confirmLogout());
+        
+        findViewById(R.id.layout_progress).setOnClickListener(v -> 
+                startActivity(new Intent(this, ProgressActivity.class)));
     }
 
     private void confirmLogout() {

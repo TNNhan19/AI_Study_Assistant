@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/surface">
+
+    <!-- Header -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        android:elevation="4dp">
+        <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+            <ImageButton android:id="@+id/btn_back"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:src="@android:drawable/ic_media_previous"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/text_primary" android:contentDescription="Back"
+                android:layout_centerVertical="true"/>
+
+            <TextView android:id="@+id/tv_title"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Edit Note" android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_lg" android:fontFamily="sans-serif-medium"
+                android:layout_toEndOf="@id/btn_back" android:layout_centerVertical="true"
+                android:layout_marginStart="@dimen/spacing_sm"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Save" android:textColor="@color/primary"
+                android:layout_alignParentEnd="true" android:layout_centerVertical="true"/>
+        </RelativeLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/spacing_lg">
+
+            <EditText
+                android:id="@+id/et_note_title"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Title"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/text_primary"
+                android:background="@null"
+                android:inputType="textCapSentences"/>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/divider" android:layout_marginTop="@dimen/spacing_md"
+                android:layout_marginBottom="@dimen/spacing_md"/>
+
+            <EditText
+                android:id="@+id/et_note_content"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Start typing..."
+                android:textSize="@dimen/text_md"
+                android:textColor="@color/text_primary"
+                android:background="@null"
+                android:gravity="top"
+                android:minLines="15"
+                android:inputType="textMultiLine|textCapSentences"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

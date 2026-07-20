@@ -21,12 +21,13 @@ public class DocumentDetailActivity extends AppCompatActivity {
 
     private TextView tvDocName, tvFileSize, tvUploadDate, tvStatus;
     private ImageButton btnBack, btnDelete;
-    private CardView cardSummary, cardQuiz, cardFlashcards, cardChat;
+    private CardView cardSummary, cardQuiz, cardFlashcards, cardChat, cardNotes;
     private LinearLayout layoutProcessing;
 
     private String documentId;
     private String documentName;
     private String documentUrl;
+    private String projectId, topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,9 +38,36 @@ public class DocumentDetailActivity extends AppCompatActivity {
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
 
+        if (documentId != null) {
+            SharedPrefManager.getInstance(this).addRecentDocument(documentId);
+            loadDocumentDetails();
+        }
+
         initViews();
         setupClickListeners();
-        displayDocumentInfo();
+    }
+
+    private void loadDocumentDetails() {
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        com.example.aistudyassistant.repositories.DocumentRepository.getInstance().getAllDocuments(userId, new com.example.aistudyassistant.api.ApiCallback<java.util.List<com.example.aistudyassistant.models.Document>>() {
+            @Override
+            public void onSuccess(java.util.List<com.example.aistudyassistant.models.Document> result) {
+                for (com.example.aistudyassistant.models.Document doc : result) {
+                    if (doc.getId().equals(documentId)) {
+                        projectId = doc.getProjectId();
+                        topicId = doc.getTopicId();
+                        runOnUiThread(() -> {
+                            tvFileSize.setText(doc.getFileSizeFormatted());
+                            tvStatus.setText(doc.getStatus());
+                            // Cập nhật URL nếu cần
+                            documentUrl = doc.getFileUrl();
+                        });
+                        break;
+                    }
+                }
+            }
+            @Override public void onError(String errorMessage) {}
+        });
     }
 
     private void initViews() {
@@ -53,6 +81,7 @@ public class DocumentDetailActivity extends AppCompatActivity {
         cardQuiz = findViewById(R.id.card_quiz);
         cardFlashcards = findViewById(R.id.card_flashcards);
         cardChat = findViewById(R.id.card_chat);
+        cardNotes = findViewById(R.id.card_notes);
         layoutProcessing = findViewById(R.id.layout_processing);
     }
 
@@ -60,6 +89,15 @@ public class DocumentDetailActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
 
         btnDelete.setOnClickListener(v -> confirmDelete());
+        
+        // Mở file (Sử dụng trình duyệt hoặc PDF Viewer mặc định của máy)
+        findViewById(R.id.tv_doc_name).setOnClickListener(v -> {
+            if (documentUrl != null && !documentUrl.isEmpty()) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(android.net.Uri.parse(documentUrl));
+                startActivity(intent);
+            }
+        });
 
         cardSummary.setOnClickListener(v -> {
             Intent intent = new Intent(this, SummaryActivity.class);
@@ -90,6 +128,15 @@ public class DocumentDetailActivity extends AppCompatActivity {
             intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
             intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
             intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
+            startActivity(intent);
+        });
+
+        cardNotes.setOnClickListener(v -> {
+            Intent intent = new Intent(this, NotesActivity.class);
+            intent.putExtra("document_id", documentId);
+            intent.putExtra("document_name", documentName);
+            intent.putExtra("project_id", projectId);
+            intent.putExtra("topic_id", topicId);
             startActivity(intent);
         });
     }
