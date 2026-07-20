@@ -3,13 +3,13 @@ package com.example.aistudyassistant.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.SupabaseClient;
+import com.example.aistudyassistant.utils.SessionManager;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
@@ -75,11 +75,11 @@ public class ProfileActivity extends AppCompatActivity {
         new Thread(() -> {
             SupabaseClient.getInstance().signOut();
             runOnUiThread(() -> {
-                // xóa token trong RAM để request sau logout không dùng lại token cũ.
-                SharedPrefManager.getInstance(this).clearSession();
-                SupabaseClient.getInstance().setAccessToken(null);  //thêm reset access token sau khi logout
+                // Xóa token đã lưu và token đang giữ trong SupabaseClient.
+                SessionManager.getInstance(this).clearSession();
                 Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 finish();
             });

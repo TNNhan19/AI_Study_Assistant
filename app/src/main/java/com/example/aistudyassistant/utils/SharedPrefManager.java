@@ -31,7 +31,7 @@ public class SharedPrefManager {
                 .putString(Constants.PREF_ACCESS_TOKEN, accessToken)
                 .putString(Constants.PREF_REFRESH_TOKEN, refreshToken)
                 .putBoolean(Constants.PREF_IS_LOGGED_IN, true)
-                .apply();
+                .commit();
     }
 
     public void clearSession() {
@@ -42,7 +42,7 @@ public class SharedPrefManager {
                 .remove(Constants.PREF_ACCESS_TOKEN)
                 .remove(Constants.PREF_REFRESH_TOKEN)
                 .putBoolean(Constants.PREF_IS_LOGGED_IN, false)
-                .apply();
+                .commit();
     }
 
     public boolean isLoggedIn() {
@@ -79,6 +79,15 @@ public class SharedPrefManager {
 
     public void updateAccessToken(String token) {
         prefs.edit().putString(Constants.PREF_ACCESS_TOKEN, token).apply();
+    }
+
+    public void updateSessionTokens(String accessToken, String refreshToken) {
+        // Lưu cả hai token vì refresh token có thể được Supabase thay mới.
+        prefs.edit()
+                .putString(Constants.PREF_ACCESS_TOKEN, accessToken)
+                .putString(Constants.PREF_REFRESH_TOKEN, refreshToken)
+                .putBoolean(Constants.PREF_IS_LOGGED_IN, true)
+                .commit();
     }
 
     // ===================== Generic helpers =====================
