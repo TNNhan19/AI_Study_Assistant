@@ -22,9 +22,11 @@ import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.example.aistudyassistant.api.SupabaseClient;
 
+import com.example.aistudyassistant.models.Project;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -34,7 +36,7 @@ public class HomeActivity extends AppCompatActivity {
     private RecyclerView rvRecentDocs, rvUpcomingSchedule;
 
     // Quick Action buttons
-    private View qaUpload, qaAskAi, qaQuiz, qaFlashcards, qaSchedule;
+    private View qaUpload, qaAskAi, qaQuiz, qaFlashcards, qaSchedule, qaProjects, qaNotes;
 
     private BottomNavigationView bottomNavigation;
 
@@ -60,29 +62,6 @@ public class HomeActivity extends AppCompatActivity {
         // Đảm bảo request test DB dùng access token của user đang login.
         String accessToken = SharedPrefManager.getInstance(this).getAccessToken();
         SupabaseClient.getInstance().setAccessToken(accessToken);
-
-        ProjectRepository.getInstance().createProject(
-                userId,
-                "Test Project",
-                "Database policy test",
-
-                new ApiCallback<String>(){
-                    @Override
-                    public void onSuccess(String result) {
-                        runOnUiThread(() ->
-                                Toast.makeText(HomeActivity.this, result,
-                                        Toast.LENGTH_SHORT).show()
-                        );
-                    }
-                    @Override
-                    public void onError(String errorMessage) {
-                        runOnUiThread(() ->
-                                Toast.makeText(HomeActivity.this, errorMessage,
-                                        Toast.LENGTH_SHORT).show()
-                        );
-                    }
-                }
-        );
     }
 
     private void initViews() {
@@ -100,17 +79,19 @@ public class HomeActivity extends AppCompatActivity {
         qaQuiz = findViewById(R.id.qa_quiz);
         qaFlashcards = findViewById(R.id.qa_flashcards);
         qaSchedule = findViewById(R.id.qa_schedule);
+        qaProjects = findViewById(R.id.qa_projects);
+        qaNotes = findViewById(R.id.qa_notes);
         bottomNavigation = findViewById(R.id.bottom_navigation);
     }
 
     private void setupGreeting() {
         String name = SharedPrefManager.getInstance(this).getUserName();
-        tvUserName.setText(name + "!");
+        tvUserName.setText(getString(R.string.user_name_format, name));
 
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        if (hour < 12) tvGreeting.setText("Good Morning,");
-        else if (hour < 18) tvGreeting.setText("Good Afternoon,");
-        else tvGreeting.setText("Good Evening,");
+        if (hour < 12) tvGreeting.setText(R.string.good_morning);
+        else if (hour < 18) tvGreeting.setText(R.string.good_afternoon);
+        else tvGreeting.setText(R.string.good_evening);
     }
 
     private void setupQuickActions() {
@@ -128,6 +109,12 @@ public class HomeActivity extends AppCompatActivity {
 
         qaSchedule.setOnClickListener(v ->
                 startActivity(new Intent(this, ScheduleActivity.class)));
+
+        qaProjects.setOnClickListener(v ->
+                startActivity(new Intent(this, ProjectsActivity.class)));
+
+        qaNotes.setOnClickListener(v ->
+                startActivity(new Intent(this, NotesActivity.class)));
 
         // Search hint click
         tvSearchHint.setOnClickListener(v ->
@@ -148,11 +135,16 @@ public class HomeActivity extends AppCompatActivity {
                 Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_URL, document.getFileUrl());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
                 startActivity(intent);
             }
             @Override
             public void onDocumentMoreClick(Document document, View anchorView) { }
+
+            @Override
+            public void onFavoriteClick(Document document) {
+                // Handle favorite toggle from home if needed
+            }
         });
         rvRecentDocs.setLayoutManager(new LinearLayoutManager(this));
         rvRecentDocs.setAdapter(documentAdapter);
@@ -191,9 +183,42 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadData() {
-        // TODO: Load real data from Supabase
-        // For now, show empty state
-        updateEmptyState();
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId.isEmpty()) return;
+
+        // 1. Load Recent Documents from SharedPreferences
+        List<String> recentIds = SharedPrefManager.getInstance(this).getRecentDocumentIds();
+        if (recentIds.isEmpty()) {
+            updateEmptyState();
+        } else {
+            com.example.aistudyassistant.repositories.DocumentRepository.getInstance().getAllDocuments(userId, new ApiCallback<List<Document>>() {
+                @Override
+                public void onSuccess(List<Document> result) {
+                    List<Document> sortedRecents = new ArrayList<>();
+                    for (String id : recentIds) {
+                        for (Document doc : result) {
+                            if (doc.getId().equals(id)) {
+                                sortedRecents.add(doc);
+                                break;
+                            }
+                        }
+                    }
+                    runOnUiThread(() -> {
+                        recentDocs.clear();
+                        recentDocs.addAll(sortedRecents);
+                        documentAdapter.updateDocuments(recentDocs);
+                        updateEmptyState();
+                    });
+                }
+
+                @Override
+                public void onError(String errorMessage) {
+                    runOnUiThread(() -> updateEmptyState());
+                }
+            });
+        }
+        
+        // 2. TODO: Load Upcoming Schedules from Supabase
     }
 
     private void updateEmptyState() {

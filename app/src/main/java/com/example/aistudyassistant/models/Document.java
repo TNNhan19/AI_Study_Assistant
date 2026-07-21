@@ -7,6 +7,7 @@ public class Document {
     private String topicId;
     private String name;
     private String filePath;
+    private String fileUrl;
     private String fileType;  // pdf, txt, docx
     private long fileSize;    // bytes
     private String status;    // UPLOADED, PROCESSING, COMPLETED, FAILED
@@ -21,8 +22,7 @@ public class Document {
         this.id = id;
         this.userId = userId;
         this.name = name;
-        // fileUrl cũ được map sang filePath vì bucket private lưu path thay vì public URL.
-        this.filePath = fileUrl;
+        this.fileUrl = fileUrl;
         this.fileType = fileType;
         this.fileSize = fileSize;
         this.status = status;
@@ -37,7 +37,7 @@ public class Document {
     public String getTopicId() { return topicId; }
     public String getName() { return name; }
     public String getFilePath() { return filePath; }
-    public String getFileUrl() { return filePath; }
+    public String getFileUrl() { return fileUrl; }
     public String getFileType() { return fileType; }
     public long getFileSize() { return fileSize; }
     public String getStatus() { return status; }
@@ -52,7 +52,7 @@ public class Document {
     public void setTopicId(String topicId) { this.topicId = topicId; }
     public void setName(String name) { this.name = name; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
-    public void setFileUrl(String fileUrl) { this.filePath = fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
     public void setFileType(String fileType) { this.fileType = fileType; }
     public void setFileSize(long fileSize) { this.fileSize = fileSize; }
     public void setStatus(String status) { this.status = status; }

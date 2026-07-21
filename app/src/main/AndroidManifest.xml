@@ -22,6 +22,16 @@
         android:theme="@style/Theme.AIStudyAssistant"
         android:usesCleartextTraffic="true">
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Auth Screens -->
         <activity
             android:name=".activities.LoginActivity"
@@ -70,6 +80,15 @@
         <activity android:name=".activities.ProfileActivity" />
         <activity android:name=".activities.EditProfileActivity" />
         <activity android:name=".activities.SearchActivity" />
+        <activity android:name=".activities.ProgressActivity" />
+
+        <!-- Content Management (Projects, Topics, Notes) -->
+        <activity android:name=".activities.ProjectsActivity" />
+        <activity android:name=".activities.TopicsActivity" />
+        <activity android:name=".activities.NotesActivity" />
+        <activity
+            android:name=".activities.EditNoteActivity"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Broadcast Receivers -->
         <receiver
