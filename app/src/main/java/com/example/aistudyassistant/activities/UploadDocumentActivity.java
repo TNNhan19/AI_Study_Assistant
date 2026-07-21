@@ -25,6 +25,7 @@ import com.example.aistudyassistant.models.Topic;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -206,18 +207,25 @@ public class UploadDocumentActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
-                // Read file bytes
-                InputStream inputStream = getContentResolver().openInputStream(selectedFileUri);
-                if (inputStream == null) {
-                    runOnUiThread(() -> {
-                        setUploading(false);
-                        Toast.makeText(this, "Could not read file", Toast.LENGTH_SHORT).show();
-                    });
-                    return;
-                }
+                byte[] fileBytes;
 
-                byte[] fileBytes = inputStream.readAllBytes();
-                inputStream.close();
+                try (InputStream inputStream = getContentResolver()
+                        .openInputStream(selectedFileUri);
+                     ByteArrayOutputStream outputStream =
+                             new ByteArrayOutputStream()) {
+                    if (inputStream == null) {
+                        throw new IOException("Could not read selected file");
+                    }
+
+                    // Đọc file tương thích từ Android API 24.
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+
+                    fileBytes = outputStream.toByteArray();
+                }
 
                 // Prepare Document model
                 com.example.aistudyassistant.models.Document doc = new com.example.aistudyassistant.models.Document();
