@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.SupabaseClient;
-import com.example.aistudyassistant.utils.SharedPrefManager;
+import com.example.aistudyassistant.utils.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -132,10 +132,9 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
 
-            // Save session
-            SharedPrefManager.getInstance(this)
-                    .saveUserSession(userId, userEmail, fullName, accessToken, refreshToken);
-            SupabaseClient.getInstance().setAccessToken(accessToken);
+            // Lưu đồng thời access token và refresh token sau khi đăng nhập.
+            SessionManager.getInstance(this).saveSession(
+                    userId, userEmail, fullName, accessToken, refreshToken);
 
             navigateToHome();
 
@@ -168,7 +167,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void navigateToHome() {
-        Intent intent = new Intent(this, HomeActivity.class);
+        Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
