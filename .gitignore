@@ -23,3 +23,6 @@ keystore.properties
 .DS_Store
 Thumbs.db
 
+# Tài liệu nội bộ
+/documents/
+
