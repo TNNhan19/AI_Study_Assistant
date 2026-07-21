@@ -12,6 +12,8 @@ import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.File;
+import java.io.FileOutputStream;
 
 public class DocumentRepository {
 
@@ -56,10 +58,6 @@ public class DocumentRepository {
                     String filePath = obj.get("file_path").getAsString();
                     doc.setFilePath(filePath);
                     
-                    // Tạo Public URL thật sự từ Supabase Storage
-                    String publicUrl = Constants.SUPABASE_URL + "/storage/v1/object/public/" + Constants.STORAGE_BUCKET + "/" + filePath;
-                    doc.setFileUrl(publicUrl);
-
                     doc.setFileType(obj.has("file_type") && !obj.get("file_type").isJsonNull() ? obj.get("file_type").getAsString() : "pdf");
                     doc.setFileSize(obj.has("file_size") && !obj.get("file_size").isJsonNull() ? obj.get("file_size").getAsLong() : 0);
                     doc.setStatus(obj.has("status") && !obj.get("status").isJsonNull() ? obj.get("status").getAsString() : "UPLOADED");
@@ -77,6 +75,56 @@ public class DocumentRepository {
                 callback.onError(e.getMessage());
             }
         }).start();
+    }
+
+    /**
+     * Downloads a document from the private Storage bucket without changing its bytes,
+     * then stores it in the app cache so it can be shared through FileProvider.
+     */
+    public void downloadDocument(Document document, File cacheDir, ApiCallback<File> callback) {
+        new Thread(() -> {
+            try {
+                if (document == null || document.getFilePath() == null
+                        || document.getFilePath().trim().isEmpty()) {
+                    callback.onError("Document path is missing");
+                    return;
+                }
+
+                byte[] fileBytes = supabaseClient.downloadFile(
+                        Constants.STORAGE_BUCKET,
+                        document.getFilePath()
+                );
+                if (fileBytes == null) {
+                    callback.onError("Could not download document");
+                    return;
+                }
+
+                File documentCache = new File(cacheDir, "documents");
+                if (!documentCache.exists() && !documentCache.mkdirs()) {
+                    callback.onError("Could not create document cache");
+                    return;
+                }
+
+                String extension = sanitizeExtension(document.getFileType());
+                String fileId = document.getId() != null
+                        ? document.getId().replaceAll("[^a-zA-Z0-9_-]", "_")
+                        : String.valueOf(document.getFilePath().hashCode());
+                File cachedFile = new File(documentCache,
+                        fileId + (extension.isEmpty() ? "" : "." + extension));
+
+                try (FileOutputStream output = new FileOutputStream(cachedFile)) {
+                    output.write(fileBytes);
+                }
+                callback.onSuccess(cachedFile);
+            } catch (Exception e) {
+                callback.onError(e.getMessage() != null ? e.getMessage() : "Could not cache document");
+            }
+        }).start();
+    }
+
+    private String sanitizeExtension(String fileType) {
+        if (fileType == null) return "";
+        return fileType.toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 
     public void uploadDocument(Document document, byte[] fileBytes, ApiCallback<Document> callback) {

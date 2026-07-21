@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.MediaType;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -219,6 +220,60 @@ public class SupabaseClient {
     }
 
     /**
+     * Downloads the original bytes from a private Storage bucket. The authenticated
+     * endpoint is required because the documents bucket is intentionally private.
+     */
+    public byte[] downloadFile(String bucket, String path) {
+        if (bucket == null || bucket.trim().isEmpty()
+                || path == null || path.trim().isEmpty()) {
+            return null;
+        }
+
+        HttpUrl.Builder urlBuilder = HttpUrl.get(baseUrl).newBuilder()
+                .addPathSegments("storage/v1/object/authenticated")
+                .addPathSegment(bucket);
+        for (String pathSegment : path.split("/")) {
+            if (!pathSegment.isEmpty()) {
+                urlBuilder.addPathSegment(pathSegment);
+            }
+        }
+
+        String requestToken = getBearerToken();
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .addHeader("apikey", anonKey)
+                .addHeader("Authorization", "Bearer " + requestToken)
+                .build();
+
+        try {
+            StorageDownloadResult result = executeDownloadOnce(request);
+            if (result.successful) return result.body;
+
+            HttpResult error = new HttpResult(result.code, false, result.errorBody);
+            if (isSessionExpired(error) && refreshAfterFailure(requestToken)) {
+                Request retryRequest = request.newBuilder()
+                        .header("Authorization", "Bearer " + getBearerToken())
+                        .build();
+                StorageDownloadResult retryResult = executeDownloadOnce(retryRequest);
+                if (retryResult.successful) return retryResult.body;
+                if (isSessionExpired(new HttpResult(
+                        retryResult.code, false, retryResult.errorBody))) {
+                    notifySessionExpired();
+                }
+                Log.e(TAG, "Storage download failed: " + retryResult.code);
+                return null;
+            }
+
+            Log.e(TAG, "Storage download failed: " + result.code);
+            return null;
+        } catch (IOException e) {
+            Log.e(TAG, "Storage download error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Returns the public URL for a stored file.
      */
     public String getFilePublicUrl(String bucket, String path) {
@@ -345,6 +400,17 @@ public class SupabaseClient {
         }
     }
 
+    private StorageDownloadResult executeDownloadOnce(Request request) throws IOException {
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                byte[] body = response.body() != null ? response.body().bytes() : new byte[0];
+                return new StorageDownloadResult(response.code(), true, body, "");
+            }
+            String errorBody = response.body() != null ? response.body().string() : "";
+            return new StorageDownloadResult(response.code(), false, null, errorBody);
+        }
+    }
+
     private boolean refreshAfterFailure(String failedAccessToken) {
         synchronized (refreshLock) {
             // Request khác đã refresh xong thì chỉ cần retry bằng token mới.
@@ -433,6 +499,20 @@ public class SupabaseClient {
             this.code = code;
             this.successful = successful;
             this.body = body;
+        }
+    }
+
+    private static class StorageDownloadResult {
+        final int code;
+        final boolean successful;
+        final byte[] body;
+        final String errorBody;
+
+        StorageDownloadResult(int code, boolean successful, byte[] body, String errorBody) {
+            this.code = code;
+            this.successful = successful;
+            this.body = body;
+            this.errorBody = errorBody;
         }
     }
 }

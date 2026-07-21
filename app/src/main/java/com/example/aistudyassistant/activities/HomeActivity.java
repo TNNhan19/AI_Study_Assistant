@@ -135,7 +135,7 @@ public class HomeActivity extends AppCompatActivity {
                 Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_URL, document.getFileUrl());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
                 startActivity(intent);
             }
             @Override

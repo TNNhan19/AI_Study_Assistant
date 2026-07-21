@@ -1,8 +1,9 @@
 package com.example.aistudyassistant.activities;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -11,11 +12,17 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.FileProvider;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.SupabaseClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.Document;
+import com.example.aistudyassistant.repositories.DocumentRepository;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
+
+import java.io.File;
+import java.util.List;
 
 public class DocumentDetailActivity extends AppCompatActivity {
 
@@ -26,8 +33,10 @@ public class DocumentDetailActivity extends AppCompatActivity {
 
     private String documentId;
     private String documentName;
-    private String documentUrl;
+    private String documentPath;
     private String projectId, topicId;
+    private Document currentDocument;
+    private boolean isOpeningDocument;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,37 +45,56 @@ public class DocumentDetailActivity extends AppCompatActivity {
 
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
-        documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentPath = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_PATH);
+        if (documentPath == null) {
+            // Backward compatibility with callers that used the old extra name.
+            documentPath = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        }
+
+        initViews();
+        displayDocumentInfo();
+        setupClickListeners();
 
         if (documentId != null) {
             SharedPrefManager.getInstance(this).addRecentDocument(documentId);
             loadDocumentDetails();
         }
-
-        initViews();
-        setupClickListeners();
     }
 
     private void loadDocumentDetails() {
         String userId = SharedPrefManager.getInstance(this).getUserId();
-        com.example.aistudyassistant.repositories.DocumentRepository.getInstance().getAllDocuments(userId, new com.example.aistudyassistant.api.ApiCallback<java.util.List<com.example.aistudyassistant.models.Document>>() {
+        DocumentRepository.getInstance().getAllDocuments(userId, new ApiCallback<List<Document>>() {
             @Override
-            public void onSuccess(java.util.List<com.example.aistudyassistant.models.Document> result) {
-                for (com.example.aistudyassistant.models.Document doc : result) {
+            public void onSuccess(List<Document> result) {
+                for (Document doc : result) {
                     if (doc.getId().equals(documentId)) {
+                        currentDocument = doc;
                         projectId = doc.getProjectId();
                         topicId = doc.getTopicId();
+                        documentPath = doc.getFilePath();
                         runOnUiThread(() -> {
+                            tvDocName.setText(doc.getName());
                             tvFileSize.setText(doc.getFileSizeFormatted());
                             tvStatus.setText(doc.getStatus());
-                            // Cập nhật URL nếu cần
-                            documentUrl = doc.getFileUrl();
                         });
-                        break;
+                        return;
                     }
                 }
+                runOnUiThread(() -> Toast.makeText(
+                        DocumentDetailActivity.this,
+                        "Không tìm thấy tài liệu",
+                        Toast.LENGTH_SHORT
+                ).show());
             }
-            @Override public void onError(String errorMessage) {}
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> Toast.makeText(
+                        DocumentDetailActivity.this,
+                        "Không thể tải thông tin tài liệu: " + errorMessage,
+                        Toast.LENGTH_SHORT
+                ).show());
+            }
         });
     }
 
@@ -87,49 +115,13 @@ public class DocumentDetailActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         btnBack.setOnClickListener(v -> finish());
-
         btnDelete.setOnClickListener(v -> confirmDelete());
-        
-        // Mở file (Sử dụng trình duyệt hoặc PDF Viewer mặc định của máy)
-        findViewById(R.id.tv_doc_name).setOnClickListener(v -> {
-            if (documentUrl != null && !documentUrl.isEmpty()) {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(android.net.Uri.parse(documentUrl));
-                startActivity(intent);
-            }
-        });
+        tvDocName.setOnClickListener(v -> openDocument());
 
-        cardSummary.setOnClickListener(v -> {
-            Intent intent = new Intent(this, SummaryActivity.class);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
-            startActivity(intent);
-        });
-
-        cardQuiz.setOnClickListener(v -> {
-            Intent intent = new Intent(this, QuizActivity.class);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
-            startActivity(intent);
-        });
-
-        cardFlashcards.setOnClickListener(v -> {
-            Intent intent = new Intent(this, FlashcardsActivity.class);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
-            startActivity(intent);
-        });
-
-        cardChat.setOnClickListener(v -> {
-            Intent intent = new Intent(this, DocumentChatActivity.class);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
-            intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
-            startActivity(intent);
-        });
+        cardSummary.setOnClickListener(v -> startDocumentFeature(SummaryActivity.class));
+        cardQuiz.setOnClickListener(v -> startDocumentFeature(QuizActivity.class));
+        cardFlashcards.setOnClickListener(v -> startDocumentFeature(FlashcardsActivity.class));
+        cardChat.setOnClickListener(v -> startDocumentFeature(DocumentChatActivity.class));
 
         cardNotes.setOnClickListener(v -> {
             Intent intent = new Intent(this, NotesActivity.class);
@@ -141,12 +133,94 @@ public class DocumentDetailActivity extends AppCompatActivity {
         });
     }
 
+    private void startDocumentFeature(Class<?> activityClass) {
+        Intent intent = new Intent(this, activityClass);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
+        // Existing feature screens still use this key; its value is now the private path.
+        intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentPath);
+        startActivity(intent);
+    }
+
     private void displayDocumentInfo() {
         tvDocName.setText(documentName != null ? documentName : "Document");
-        // TODO: Load actual file size, date and status from Supabase
         tvFileSize.setText("—");
         tvUploadDate.setText("—");
-        tvStatus.setText("Completed");
+        tvStatus.setText("Đang tải");
+    }
+
+    private void openDocument() {
+        if (isOpeningDocument) return;
+        if (currentDocument == null || currentDocument.getFilePath() == null
+                || currentDocument.getFilePath().trim().isEmpty()) {
+            Toast.makeText(this, "Thông tin tệp đang được tải, vui lòng thử lại", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        isOpeningDocument = true;
+        tvDocName.setEnabled(false);
+        Toast.makeText(this, "Đang chuẩn bị tài liệu...", Toast.LENGTH_SHORT).show();
+
+        DocumentRepository.getInstance().downloadDocument(
+                currentDocument,
+                getCacheDir(),
+                new ApiCallback<File>() {
+                    @Override
+                    public void onSuccess(File cachedFile) {
+                        runOnUiThread(() -> {
+                            isOpeningDocument = false;
+                            tvDocName.setEnabled(true);
+                            openCachedFile(cachedFile, currentDocument.getFileType());
+                        });
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() -> {
+                            isOpeningDocument = false;
+                            tvDocName.setEnabled(true);
+                            Toast.makeText(
+                                    DocumentDetailActivity.this,
+                                    "Không thể mở tài liệu: " + errorMessage,
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        });
+                    }
+                }
+        );
+    }
+
+    private void openCachedFile(File file, String fileType) {
+        Uri contentUri = FileProvider.getUriForFile(
+                this,
+                getPackageName() + ".fileprovider",
+                file
+        );
+        Intent viewIntent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(contentUri, getMimeType(fileType))
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        try {
+            startActivity(Intent.createChooser(viewIntent, "Mở tài liệu bằng"));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Thiết bị chưa có ứng dụng hỗ trợ loại tệp này", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String getMimeType(String fileType) {
+        if (fileType == null) return "application/octet-stream";
+        switch (fileType.toLowerCase()) {
+            case "pdf":
+                return "application/pdf";
+            case "txt":
+                return "text/plain";
+            case "doc":
+                return "application/msword";
+            case "docx":
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            default:
+                return "application/octet-stream";
+        }
     }
 
     private void confirmDelete() {
@@ -159,7 +233,7 @@ public class DocumentDetailActivity extends AppCompatActivity {
     }
 
     private void deleteDocument() {
-        // TODO: Call SupabaseClient to delete document and related data
+        // Existing delete flow is outside the document-viewing change.
         Toast.makeText(this, "Document deleted", Toast.LENGTH_SHORT).show();
         finish();
     }

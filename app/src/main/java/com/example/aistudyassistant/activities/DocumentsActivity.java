@@ -121,7 +121,7 @@ public class DocumentsActivity extends AppCompatActivity {
                 Intent intent = new Intent(DocumentsActivity.this, DocumentDetailActivity.class);
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_URL, document.getFileUrl());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
                 startActivity(intent);
             }
 
@@ -213,6 +213,7 @@ public class DocumentsActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, DocumentDetailActivity.class);
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
                 startActivity(intent);
                 return true;
             }
