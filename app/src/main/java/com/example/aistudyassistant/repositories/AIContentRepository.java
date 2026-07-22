@@ -3,6 +3,7 @@ package com.example.aistudyassistant.repositories;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Document;
+import com.example.aistudyassistant.models.Flashcard;
 import com.example.aistudyassistant.models.QuizQuestion;
 import com.example.aistudyassistant.models.Summary;
 import com.example.aistudyassistant.utils.Constants;
@@ -160,6 +161,85 @@ public class AIContentRepository {
         }).start();
     }
 
+    /**
+     * Lấy flashcard đã lưu của một tài liệu.
+     */
+    public void getFlashcardsByDocument(String userId, String documentId,
+                                        ApiCallback<List<Flashcard>> callback) {
+        if (isBlank(userId) || isBlank(documentId)) {
+            callback.onError("Thiếu thông tin user hoặc tài liệu");
+            return;
+        }
+        String query = "user_id=eq." + userId
+                + "&document_id=eq." + documentId
+                + "&order=created_at.asc,id.asc";
+        fetchFlashcards(query, callback);
+    }
+
+    /**
+     * Lấy flashcard theo topic để tái sử dụng cho màn hình ôn tập.
+     */
+    public void getFlashcardsByTopic(String userId, String topicId,
+                                     ApiCallback<List<Flashcard>> callback) {
+        if (isBlank(userId) || isBlank(topicId)) {
+            callback.onError("Thiếu thông tin user hoặc chủ đề");
+            return;
+        }
+        String query = "user_id=eq." + userId
+                + "&topic_id=eq." + topicId
+                + "&order=created_at.asc,id.asc";
+        fetchFlashcards(query, callback);
+    }
+
+    /**
+     * Bulk insert toàn bộ flashcard do AI tạo.
+     */
+    public void saveFlashcards(Document document, List<Flashcard> flashcards,
+                               ApiCallback<List<Flashcard>> callback) {
+        new Thread(() -> {
+            try {
+                validateFlashcards(document, flashcards);
+                JsonArray requestRows = new JsonArray();
+                for (Flashcard flashcard : flashcards) {
+                    requestRows.add(buildFlashcardJson(document, flashcard));
+                }
+
+                String response = supabaseClient.insertIntoTable(
+                        Constants.TABLE_FLASHCARDS, requestRows.toString());
+                if (response == null) {
+                    callback.onError("Không thể lưu flashcard");
+                    return;
+                }
+
+                JsonArray savedRows = parseRows(response, "Không thể lưu flashcard");
+                if (savedRows.size() != flashcards.size()) {
+                    callback.onError("Số flashcard đã lưu không khớp kết quả AI");
+                    return;
+                }
+                callback.onSuccess(parseFlashcards(savedRows));
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể lưu flashcard"));
+            }
+        }).start();
+    }
+
+    private void fetchFlashcards(String query, ApiCallback<List<Flashcard>> callback) {
+        new Thread(() -> {
+            try {
+                String response = supabaseClient.getFromTable(
+                        Constants.TABLE_FLASHCARDS, query);
+                if (response == null) {
+                    callback.onError("Không thể tải flashcard");
+                    return;
+                }
+                JsonArray rows = parseRows(response, "Không thể tải flashcard");
+                callback.onSuccess(parseFlashcards(rows));
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể đọc flashcard"));
+            }
+        }).start();
+    }
+
     private JsonObject buildSummaryJson(Summary summary) {
         JsonObject json = new JsonObject();
         json.addProperty("user_id", summary.getUserId());
@@ -194,6 +274,21 @@ public class AIContentRepository {
         return json;
     }
 
+    private JsonObject buildFlashcardJson(Document document, Flashcard flashcard) {
+        JsonObject json = new JsonObject();
+        json.addProperty("user_id", document.getUserId());
+        json.addProperty("document_id", document.getId());
+        if (!isBlank(document.getTopicId())) {
+            json.addProperty("topic_id", document.getTopicId());
+        }
+        json.addProperty("front", flashcard.getFront());
+        json.addProperty("back", flashcard.getBack());
+        json.addProperty("difficulty", isBlank(flashcard.getDifficulty())
+                ? "MEDIUM"
+                : flashcard.getDifficulty());
+        return json;
+    }
+
     private Summary parseSummary(JsonObject json) {
         Summary summary = new Summary();
         summary.setId(readString(json, "id"));
@@ -225,6 +320,25 @@ public class AIContentRepository {
             questions.add(question);
         }
         return questions;
+    }
+
+    private List<Flashcard> parseFlashcards(JsonArray rows) {
+        List<Flashcard> flashcards = new ArrayList<>();
+        for (JsonElement row : rows) {
+            JsonObject json = row.getAsJsonObject();
+            Flashcard flashcard = new Flashcard(
+                    readString(json, "front"),
+                    readString(json, "back")
+            );
+            flashcard.setId(readString(json, "id"));
+            flashcard.setUserId(readString(json, "user_id"));
+            flashcard.setDocumentId(readString(json, "document_id"));
+            flashcard.setTopicId(readString(json, "topic_id"));
+            String difficulty = readString(json, "difficulty");
+            flashcard.setDifficulty(isBlank(difficulty) ? "MEDIUM" : difficulty);
+            flashcards.add(flashcard);
+        }
+        return flashcards;
     }
 
     private JsonArray toJsonArray(List<String> values) {
@@ -284,6 +398,20 @@ public class AIContentRepository {
                     || isBlank(question.getCorrectAnswer())
                     || !question.getCorrectAnswer().matches("[ABCD]")) {
                 throw new IllegalArgumentException("Có câu hỏi hoặc đáp án không hợp lệ");
+            }
+        }
+    }
+
+    private void validateFlashcards(Document document, List<Flashcard> flashcards) {
+        if (document == null || isBlank(document.getUserId())
+                || isBlank(document.getId()) || flashcards == null
+                || flashcards.isEmpty()) {
+            throw new IllegalArgumentException("Bộ flashcard thiếu dữ liệu bắt buộc");
+        }
+        for (Flashcard flashcard : flashcards) {
+            if (flashcard == null || isBlank(flashcard.getFront())
+                    || isBlank(flashcard.getBack())) {
+                throw new IllegalArgumentException("Có flashcard thiếu câu hỏi hoặc đáp án");
             }
         }
     }

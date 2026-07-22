@@ -4,6 +4,7 @@ import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -15,6 +16,7 @@ import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Flashcard;
+import com.example.aistudyassistant.repositories.AIContentRepository;
 import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
@@ -27,7 +29,7 @@ public class FlashcardsActivity extends AppCompatActivity {
 
     private TextView tvCardCount, tvFrontText, tvBackText;
     private LinearLayout cardFront, cardBack, layoutLoading, layoutProgressDots;
-    private LinearLayout flipCardContainer;
+    private FrameLayout flipCardContainer;
     private MaterialButton btnPrev, btnNext, btnKnown, btnUnknown, btnGenerate;
     private ImageButton btnBack;
 
@@ -122,7 +124,28 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void loadFlashcards() {
-        // TODO: Tải flashcard đã lưu ở task AI Flashcard.
+        setLoading(true);
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        AIContentRepository.getInstance().getFlashcardsByDocument(
+                userId, documentId,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> result) {
+                runOnUiThread(() -> {
+                    showFlashcards(result);
+                    setLoading(false);
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void generateFlashcards() {
@@ -132,12 +155,7 @@ public class FlashcardsActivity extends AppCompatActivity {
                 new ApiCallback<List<Flashcard>>() {
             @Override
             public void onSuccess(List<Flashcard> result) {
-                setLoading(false);
-                flashcards.clear();
-                flashcards.addAll(result);
-                currentIndex = 0;
-                displayCard(0);
-                updateProgressDots();
+                saveFlashcards(result);
             }
 
             @Override
@@ -146,6 +164,44 @@ public class FlashcardsActivity extends AppCompatActivity {
                 Toast.makeText(FlashcardsActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void saveFlashcards(List<Flashcard> generatedFlashcards) {
+        AIContentRepository.getInstance().saveFlashcards(
+                buildDocument(), generatedFlashcards,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> savedFlashcards) {
+                runOnUiThread(() -> {
+                    showFlashcards(savedFlashcards);
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            "Flashcards saved", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showFlashcards(List<Flashcard> loadedFlashcards) {
+        flashcards.clear();
+        flashcards.addAll(loadedFlashcards);
+        currentIndex = 0;
+        if (flashcards.isEmpty()) {
+            tvCardCount.setText("No cards yet");
+            layoutProgressDots.removeAllViews();
+            return;
+        }
+        displayCard(0);
+        updateProgressDots();
     }
 
     private void displayCard(int index) {
@@ -168,6 +224,7 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void flipCard() {
+        if (flashcards.isEmpty()) return;
         if (isShowingFront) {
             cardFront.setVisibility(View.GONE);
             cardBack.setVisibility(View.VISIBLE);
@@ -201,9 +258,16 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
+        boolean hasCards = !flashcards.isEmpty();
         layoutLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
-        flipCardContainer.setVisibility(loading ? View.GONE : View.VISIBLE);
-        btnGenerate.setEnabled(!loading);
+        flipCardContainer.setVisibility(!loading && hasCards ? View.VISIBLE : View.GONE);
+        layoutProgressDots.setVisibility(!loading && hasCards ? View.VISIBLE : View.GONE);
+        btnPrev.setEnabled(!loading && hasCards && currentIndex > 0);
+        btnNext.setEnabled(!loading && hasCards && currentIndex < flashcards.size() - 1);
+        btnKnown.setEnabled(!loading && hasCards);
+        btnUnknown.setEnabled(!loading && hasCards);
+        btnGenerate.setEnabled(!loading && !hasCards);
+        btnGenerate.setText(loading ? "Loading..." : hasCards ? "Generated" : "Generate");
     }
 
     private Document buildDocument() {
