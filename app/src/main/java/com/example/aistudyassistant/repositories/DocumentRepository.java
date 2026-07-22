@@ -14,6 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.text.ParseException;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class DocumentRepository {
 
@@ -48,27 +53,7 @@ public class DocumentRepository {
                 JsonArray jsonArray = JsonParser.parseString(response).getAsJsonArray();
                 List<Document> documents = new ArrayList<>();
                 for (JsonElement element : jsonArray) {
-                    // Manual mapping because model field names might differ slightly from DB columns
-                    JsonObject obj = element.getAsJsonObject();
-                    Document doc = new Document();
-                    doc.setId(obj.get("id").getAsString());
-                    doc.setUserId(obj.get("user_id").getAsString());
-                    doc.setName(obj.get("name").getAsString());
-                    
-                    String filePath = obj.get("file_path").getAsString();
-                    doc.setFilePath(filePath);
-                    
-                    doc.setFileType(obj.has("file_type") && !obj.get("file_type").isJsonNull() ? obj.get("file_type").getAsString() : "pdf");
-                    doc.setFileSize(obj.has("file_size") && !obj.get("file_size").isJsonNull() ? obj.get("file_size").getAsLong() : 0);
-                    doc.setStatus(obj.has("status") && !obj.get("status").isJsonNull() ? obj.get("status").getAsString() : "UPLOADED");
-                    doc.setFavorite(obj.has("is_favorite") && !obj.get("is_favorite").isJsonNull() && obj.get("is_favorite").getAsBoolean());
-                    
-                    if (obj.has("project_id") && !obj.get("project_id").isJsonNull()) 
-                        doc.setProjectId(obj.get("project_id").getAsString());
-                    if (obj.has("topic_id") && !obj.get("topic_id").isJsonNull()) 
-                        doc.setTopicId(obj.get("topic_id").getAsString());
-
-                    documents.add(doc);
+                    documents.add(mapDocument(element.getAsJsonObject()));
                 }
                 callback.onSuccess(documents);
             } catch (Exception e) {
@@ -168,8 +153,7 @@ public class DocumentRepository {
                 JsonArray resultArray = JsonParser.parseString(dbResponse).getAsJsonArray();
                 if (resultArray.size() > 0) {
                     JsonObject insertedObj = resultArray.get(0).getAsJsonObject();
-                    document.setId(insertedObj.get("id").getAsString());
-                    callback.onSuccess(document);
+                    callback.onSuccess(mapDocument(insertedObj));
                 } else {
                     callback.onError("Failed to retrieve saved document info");
                 }
@@ -178,6 +162,88 @@ public class DocumentRepository {
                 callback.onError(e.getMessage());
             }
         }).start();
+    }
+
+    private Document mapDocument(JsonObject obj) throws ParseException {
+        Document document = new Document();
+        document.setId(obj.get("id").getAsString());
+        document.setUserId(obj.get("user_id").getAsString());
+        document.setName(obj.get("name").getAsString());
+        document.setFilePath(obj.get("file_path").getAsString());
+        document.setFileType(getOptionalString(obj, "file_type", "pdf"));
+        document.setFileSize(obj.has("file_size") && !obj.get("file_size").isJsonNull()
+                ? obj.get("file_size").getAsLong() : 0);
+        document.setStatus(getOptionalString(obj, "status", Constants.STATUS_UPLOADED));
+        document.setFavorite(obj.has("is_favorite") && !obj.get("is_favorite").isJsonNull()
+                && obj.get("is_favorite").getAsBoolean());
+
+        if (obj.has("project_id") && !obj.get("project_id").isJsonNull()) {
+            document.setProjectId(obj.get("project_id").getAsString());
+        }
+        if (obj.has("topic_id") && !obj.get("topic_id").isJsonNull()) {
+            document.setTopicId(obj.get("topic_id").getAsString());
+        }
+
+        long createdAt = parseSupabaseTimestamp(obj, "created_at");
+        document.setCreatedAt(createdAt);
+        document.setUpdatedAt(obj.has("updated_at") && !obj.get("updated_at").isJsonNull()
+                ? parseSupabaseTimestamp(obj, "updated_at") : createdAt);
+        return document;
+    }
+
+    private String getOptionalString(JsonObject obj, String field, String defaultValue) {
+        return obj.has(field) && !obj.get(field).isJsonNull()
+                ? obj.get(field).getAsString() : defaultValue;
+    }
+
+    private long parseSupabaseTimestamp(JsonObject obj, String field) throws ParseException {
+        if (!obj.has(field) || obj.get(field).isJsonNull()) {
+            throw new ParseException("Missing document timestamp: " + field, 0);
+        }
+
+        String timestamp = obj.get(field).getAsString();
+        String normalized = normalizeFractionalSeconds(timestamp);
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US);
+        format.setLenient(false);
+        ParsePosition position = new ParsePosition(0);
+        Date parsed = format.parse(normalized, position);
+        if (parsed == null || position.getIndex() != normalized.length()) {
+            throw new ParseException("Invalid document timestamp: " + timestamp,
+                    Math.max(position.getErrorIndex(), 0));
+        }
+        return parsed.getTime();
+    }
+
+    private String normalizeFractionalSeconds(String timestamp) throws ParseException {
+        int timeSeparator = timestamp.indexOf('T');
+        if (timeSeparator < 0) {
+            throw new ParseException("Invalid document timestamp: " + timestamp, 0);
+        }
+
+        int zoneStart = timestamp.endsWith("Z") ? timestamp.length() - 1 : -1;
+        if (zoneStart < 0) {
+            int plus = timestamp.indexOf('+', timeSeparator);
+            int minus = timestamp.indexOf('-', timeSeparator);
+            zoneStart = plus >= 0 ? plus : minus;
+        }
+        if (zoneStart < 0) {
+            throw new ParseException("Timestamp has no timezone: " + timestamp, timestamp.length());
+        }
+
+        int fractionStart = timestamp.indexOf('.', timeSeparator);
+        if (fractionStart < 0 || fractionStart > zoneStart) {
+            return timestamp.substring(0, zoneStart) + ".000" + timestamp.substring(zoneStart);
+        }
+
+        String fraction = timestamp.substring(fractionStart + 1, zoneStart);
+        if (fraction.length() >= 3) {
+            fraction = fraction.substring(0, 3);
+        } else {
+            StringBuilder padded = new StringBuilder(fraction);
+            while (padded.length() < 3) padded.append('0');
+            fraction = padded.toString();
+        }
+        return timestamp.substring(0, fractionStart + 1) + fraction + timestamp.substring(zoneStart);
     }
 
     public void deleteDocument(Document document, ApiCallback<Boolean> callback) {

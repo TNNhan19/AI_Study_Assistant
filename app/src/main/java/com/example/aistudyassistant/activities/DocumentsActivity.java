@@ -26,6 +26,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class DocumentsActivity extends AppCompatActivity {
@@ -41,6 +42,7 @@ public class DocumentsActivity extends AppCompatActivity {
     private DocumentAdapter adapter;
     private final List<Document> allDocuments = new ArrayList<>();
     private final List<Document> filteredDocuments = new ArrayList<>();
+    private int selectedSort = 1;
     
     private String projectId, topicId, topicName;
 
@@ -91,20 +93,7 @@ public class DocumentsActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Sort Documents")
                 .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0: // Name
-                            java.util.Collections.sort(allDocuments, (d1, d2) -> d1.getName().compareToIgnoreCase(d2.getName()));
-                            break;
-                        case 1: // Date Newest
-                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d2.getCreatedAt(), d1.getCreatedAt()));
-                            break;
-                        case 2: // Date Oldest
-                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d1.getCreatedAt(), d2.getCreatedAt()));
-                            break;
-                        case 3: // Size
-                            java.util.Collections.sort(allDocuments, (d1, d2) -> Long.compare(d2.getFileSize(), d1.getFileSize()));
-                            break;
-                    }
+                    selectedSort = which;
                     applyFilters();
                 })
                 .show();
@@ -180,11 +169,25 @@ public class DocumentsActivity extends AppCompatActivity {
         java.util.Collections.sort(filteredDocuments, (d1, d2) -> {
             if (d1.isFavorite() && !d2.isFavorite()) return -1;
             if (!d1.isFavorite() && d2.isFavorite()) return 1;
-            return Long.compare(d2.getCreatedAt(), d1.getCreatedAt()); // Sắp xếp theo ngày mới nhất
+            return getSelectedComparator().compare(d1, d2);
         });
 
         adapter.notifyDataSetChanged();
         updateEmptyState();
+    }
+
+    private Comparator<Document> getSelectedComparator() {
+        switch (selectedSort) {
+            case 0:
+                return (d1, d2) -> d1.getName().compareToIgnoreCase(d2.getName());
+            case 2:
+                return (d1, d2) -> Long.compare(d1.getCreatedAt(), d2.getCreatedAt());
+            case 3:
+                return (d1, d2) -> Long.compare(d2.getFileSize(), d1.getFileSize());
+            case 1:
+            default:
+                return (d1, d2) -> Long.compare(d2.getCreatedAt(), d1.getCreatedAt());
+        }
     }
 
     private void setupSearch() {
