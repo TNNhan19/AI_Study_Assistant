@@ -42,7 +42,10 @@ with expected_columns(table_name, column_name) as (
         ('notes', 'is_pinned'),
         ('study_plans', 'id'), ('study_plans', 'user_id'),
         ('reminders', 'id'), ('reminders', 'user_id'),
-        ('chat_history', 'id'), ('chat_history', 'user_id')
+        ('chat_history', 'id'), ('chat_history', 'user_id'),
+        ('chat_history', 'project_id'), ('chat_history', 'topic_id'),
+        ('chat_history', 'document_id'), ('chat_history', 'role'),
+        ('chat_history', 'content'), ('chat_history', 'created_at')
 )
 select expected_columns.table_name, expected_columns.column_name as missing_column
 from expected_columns

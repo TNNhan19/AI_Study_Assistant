@@ -7,9 +7,12 @@ import android.os.Looper;
 import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.AIProcessingResult;
+import com.example.aistudyassistant.models.ChatContextScope;
+import com.example.aistudyassistant.models.ChatMessage;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.DocumentAnalysis;
 import com.example.aistudyassistant.models.Flashcard;
+import com.example.aistudyassistant.models.LearningContext;
 import com.example.aistudyassistant.models.QuizQuestion;
 import com.example.aistudyassistant.models.Summary;
 import com.example.aistudyassistant.repositories.DocumentRepository;
@@ -34,6 +37,10 @@ public class AIProcessingService {
 
     private static final int MAX_FILE_BYTES = 25 * 1024 * 1024;
     private static final int MAX_DOCUMENT_CHARS = 160_000;
+    private static final int MAX_CHAT_CONTEXT_CHARS = 80_000;
+    private static final int MAX_CHAT_CONTEXT_DOCUMENTS = 5;
+    private static final int MAX_CHAT_HISTORY_MESSAGES = 10;
+    private static final int MAX_CHAT_HISTORY_CHARS = 12_000;
     private static final int DEFAULT_QUIZ_COUNT = 10;
     private static final int DEFAULT_FLASHCARD_COUNT = 15;
 
@@ -101,6 +108,38 @@ public class AIProcessingService {
         }, callback);
     }
 
+    public void prepareLearningContext(Document currentDocument, ChatContextScope scope,
+                                       ApiCallback<LearningContext> callback) {
+        submit(() -> buildLearningContext(currentDocument, scope), callback);
+    }
+
+    public void answerWithLearningContext(LearningContext context,
+                                          List<ChatMessage> conversationHistory,
+                                          String question,
+                                          ApiCallback<String> callback) {
+        submit(() -> {
+            if (context == null || context.getContent() == null
+                    || context.getContent().trim().isEmpty()) {
+                throw new IllegalArgumentException("Ngữ cảnh học tập chưa sẵn sàng");
+            }
+            if (question == null || question.trim().isEmpty()) {
+                throw new IllegalArgumentException("Câu hỏi không được để trống");
+            }
+
+            String history = formatConversationHistory(conversationHistory);
+            String response = aiClient.chatWithLearningContext(
+                    context.getScope().getDisplayName(),
+                    context.getContent(),
+                    history,
+                    question.trim()
+            );
+            if (response == null || response.trim().isEmpty()) {
+                throw new IllegalStateException("Dịch vụ AI chưa trả về nội dung");
+            }
+            return response.trim();
+        }, callback);
+    }
+
     /**
      * Đọc file một lần rồi tạo đủ summary, quiz và flashcard.
      */
@@ -141,6 +180,107 @@ public class AIProcessingService {
         return new DocumentAnalysis(
                 document.getId(), fileType, textForAi,
                 textForAi.length(), wordCount, truncated);
+    }
+
+    private LearningContext buildLearningContext(Document currentDocument,
+                                                  ChatContextScope scope) throws Exception {
+        if (currentDocument == null || scope == null) {
+            throw new IllegalArgumentException("Thiếu thông tin ngữ cảnh học tập");
+        }
+
+        List<Document> documents = resolveContextDocuments(currentDocument, scope);
+        moveCurrentDocumentFirst(documents, currentDocument.getId());
+
+        StringBuilder context = new StringBuilder();
+        int sourceCount = 0;
+        Exception firstError = null;
+        for (Document document : documents) {
+            if (sourceCount >= MAX_CHAT_CONTEXT_DOCUMENTS
+                    || context.length() >= MAX_CHAT_CONTEXT_CHARS) {
+                break;
+            }
+
+            try {
+                DocumentAnalysis analysis = analyzeBlocking(document);
+                if (appendDocumentContext(context, document, analysis.getText())) {
+                    sourceCount++;
+                }
+            } catch (Exception error) {
+                if (scope == ChatContextScope.DOCUMENT) throw error;
+                if (firstError == null) firstError = error;
+            }
+        }
+
+        if (sourceCount == 0) {
+            if (firstError != null) throw firstError;
+            throw new IllegalStateException("Không có tài liệu phù hợp trong phạm vi đã chọn");
+        }
+        return new LearningContext(scope, context.toString(), sourceCount);
+    }
+
+    private List<Document> resolveContextDocuments(Document currentDocument,
+                                                    ChatContextScope scope) {
+        if (scope == ChatContextScope.DOCUMENT) {
+            return new ArrayList<>(Collections.singletonList(currentDocument));
+        }
+        if (scope == ChatContextScope.TOPIC) {
+            if (currentDocument.getTopicId() == null
+                    || currentDocument.getTopicId().trim().isEmpty()) {
+                throw new IllegalArgumentException("Tài liệu chưa thuộc chủ đề nào");
+            }
+            return new ArrayList<>(documentRepository.getDocumentsByTopicBlocking(
+                    currentDocument.getTopicId()));
+        }
+        if (currentDocument.getProjectId() == null
+                || currentDocument.getProjectId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Tài liệu chưa thuộc dự án nào");
+        }
+        return new ArrayList<>(documentRepository.getDocumentsByProjectBlocking(
+                currentDocument.getProjectId()));
+    }
+
+    private void moveCurrentDocumentFirst(List<Document> documents, String documentId) {
+        if (documentId == null) return;
+        for (int index = 0; index < documents.size(); index++) {
+            if (documentId.equals(documents.get(index).getId())) {
+                Document current = documents.remove(index);
+                documents.add(0, current);
+                return;
+            }
+        }
+    }
+
+    private boolean appendDocumentContext(StringBuilder context, Document document,
+                                          String documentText) {
+        String documentName = document.getName() == null ? "Không tên" : document.getName();
+        String header = "\n\n--- TÀI LIỆU: " + documentName + " ---\n";
+        int remaining = MAX_CHAT_CONTEXT_CHARS - context.length();
+        if (remaining <= header.length()) return false;
+        context.append(header);
+
+        int textLimit = Math.min(documentText.length(),
+                MAX_CHAT_CONTEXT_CHARS - context.length());
+        context.append(documentText, 0, textLimit);
+        return textLimit > 0;
+    }
+
+    private String formatConversationHistory(List<ChatMessage> history) {
+        if (history == null || history.isEmpty()) return "Không có hội thoại trước đó.";
+
+        int start = Math.max(0, history.size() - MAX_CHAT_HISTORY_MESSAGES);
+        StringBuilder formatted = new StringBuilder();
+        for (int index = start; index < history.size(); index++) {
+            ChatMessage message = history.get(index);
+            if (message == null || message.getContent() == null) continue;
+
+            String line = (message.isUserMessage() ? "HỌC VIÊN: " : "TRỢ LÝ: ")
+                    + message.getContent().trim() + "\n";
+            int remaining = MAX_CHAT_HISTORY_CHARS - formatted.length();
+            if (remaining <= 0) break;
+            formatted.append(line, 0, Math.min(line.length(), remaining));
+        }
+        return formatted.length() == 0
+                ? "Không có hội thoại trước đó." : formatted.toString();
     }
 
     private Summary createSummaryBlocking(Document document,

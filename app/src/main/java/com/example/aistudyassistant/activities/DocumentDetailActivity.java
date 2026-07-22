@@ -144,6 +144,7 @@ public class DocumentDetailActivity extends AppCompatActivity {
         // Truyền private Storage path cho các màn hình AI.
         intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentPath);
         intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+        intent.putExtra(Constants.EXTRA_PROJECT_ID, projectId);
         intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
         startActivity(intent);
     }
