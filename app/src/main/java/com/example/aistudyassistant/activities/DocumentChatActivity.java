@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.adapters.ChatMessageAdapter;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.models.ChatMessage;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -36,7 +36,7 @@ public class DocumentChatActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentUrl;
-    private String documentContext; // Cached document text for Gemini
+    private String documentContext; // Lưu nội dung tài liệu làm ngữ cảnh AI.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,11 +101,11 @@ public class DocumentChatActivity extends AppCompatActivity {
                 documentContext = "Sample document content. TODO: Load actual document from " + documentUrl;
             }
 
-            String response = GeminiClient.getInstance().chatWithDocument(documentContext, question);
+            String response = AIClient.getInstance().chatWithDocument(documentContext, question);
             runOnUiThread(() -> {
                 showTypingIndicator(false);
                 addAiMessage(response != null ? response
-                        : "Sorry, I couldn't get a response. Check your API key.");
+                        : "Sorry, I couldn't reach the AI service. Please sign in and try again.");
             });
         }).start();
     }

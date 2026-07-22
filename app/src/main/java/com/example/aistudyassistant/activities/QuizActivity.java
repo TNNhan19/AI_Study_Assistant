@@ -15,7 +15,7 @@ import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.models.QuizQuestion;
 import com.example.aistudyassistant.models.QuizResult;
 import com.example.aistudyassistant.utils.Constants;
@@ -106,7 +106,7 @@ public class QuizActivity extends AppCompatActivity {
 
     private void loadQuestions() {
         // TODO: First check Supabase for existing quiz questions
-        // If not found, generate via Gemini
+        // Nếu chưa có dữ liệu thì yêu cầu AI tạo mới.
 
         // MOCK: Generate with mock data for now
         generateQuiz();
@@ -117,7 +117,7 @@ public class QuizActivity extends AppCompatActivity {
 
         new Thread(() -> {
             String documentText = "Sample document content."; // TODO: Load actual document
-            String responseJson = GeminiClient.getInstance().generateQuiz(documentText, 10);
+            String responseJson = AIClient.getInstance().generateQuiz(documentText, 10);
 
             runOnUiThread(() -> {
                 setLoading(false);

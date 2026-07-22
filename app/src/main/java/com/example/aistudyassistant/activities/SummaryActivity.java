@@ -10,7 +10,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.models.Summary;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.button.MaterialButton;
@@ -80,14 +80,14 @@ public class SummaryActivity extends AppCompatActivity {
             // MOCK: Use placeholder for now
             String documentText = "Sample document content. Replace this with actual document text.";
 
-            String responseJson = GeminiClient.getInstance().generateSummary(documentText);
+            String responseJson = AIClient.getInstance().generateSummary(documentText);
 
             runOnUiThread(() -> {
                 setGenerating(false);
                 if (responseJson != null) {
                     displaySummary(responseJson);
                 } else {
-                    Toast.makeText(this, "Failed to generate summary. Check your API key.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Failed to generate summary. Please try again.", Toast.LENGTH_SHORT).show();
                 }
             });
         }).start();
@@ -95,8 +95,7 @@ public class SummaryActivity extends AppCompatActivity {
 
     private void displaySummary(String responseJson) {
         try {
-            // Parse JSON response from Gemini
-            // Clean markdown code blocks if present
+            // Bỏ code fence để parse JSON do AI trả về.
             String cleaned = responseJson.trim();
             if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
             if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);

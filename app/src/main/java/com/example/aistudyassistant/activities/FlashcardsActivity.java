@@ -12,7 +12,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.models.Flashcard;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.button.MaterialButton;
@@ -127,7 +127,7 @@ public class FlashcardsActivity extends AppCompatActivity {
 
         new Thread(() -> {
             String documentText = "Sample document content."; // TODO: Load actual document
-            String responseJson = GeminiClient.getInstance().generateFlashcards(documentText, 15);
+            String responseJson = AIClient.getInstance().generateFlashcards(documentText, 15);
 
             runOnUiThread(() -> {
                 setLoading(false);

@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.adapters.ChatMessageAdapter;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.models.ChatMessage;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -81,13 +81,13 @@ public class ChatActivity extends AppCompatActivity {
         showTypingIndicator(true);
 
         new Thread(() -> {
-            String response = GeminiClient.getInstance().generalChat(text);
+            String response = AIClient.getInstance().generalChat(text);
             runOnUiThread(() -> {
                 showTypingIndicator(false);
                 if (response != null) {
                     addAiMessage(response);
                 } else {
-                    addAiMessage("Sorry, I couldn't get a response. Please check your API key configuration.");
+                    addAiMessage("Sorry, I couldn't reach the AI service. Please sign in and try again.");
                 }
             });
         }).start();
