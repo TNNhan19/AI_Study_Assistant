@@ -70,6 +70,14 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         notifyItemInserted(messages.size() - 1);
     }
 
+    public void clearMessages() {
+        int oldSize = messages.size();
+        messages.clear();
+        if (oldSize > 0) {
+            notifyItemRangeRemoved(0, oldSize);
+        }
+    }
+
     static class UserMessageViewHolder extends RecyclerView.ViewHolder {
         TextView tvMessage, tvTime;
 

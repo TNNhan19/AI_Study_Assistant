@@ -67,7 +67,7 @@
         <activity android:name=".activities.QuizActivity" />
         <activity android:name=".activities.QuizResultActivity" />
         <activity android:name=".activities.FlashcardsActivity" />
-        <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.AIChatActivity" />
         <activity
             android:name=".activities.DocumentChatActivity"
             android:windowSoftInputMode="adjustResize" />

@@ -100,8 +100,12 @@ public class AIClient {
     }
 
     public String generalChat(String userQuestion) {
-        String prompt = "You are a helpful study assistant for students. "
-                + "Answer the following question clearly and helpfully.\n\n"
+        String prompt = "You are an accurate and supportive AI learning assistant. "
+                + "Answer in the same language as the student's question. "
+                + "For concept explanations, define key terms, explain step by step, "
+                + "and include a simple example when useful. "
+                + "Keep the answer clear and focused. If uncertain, state the limitation "
+                + "instead of inventing facts.\n\n"
                 + "QUESTION: " + userQuestion;
 
         return generateText(TASK_CHAT, prompt);

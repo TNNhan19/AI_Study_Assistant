@@ -86,6 +86,21 @@ public class AIProcessingService {
         }, callback);
     }
 
+    public void answerStudyQuestion(String question, ApiCallback<String> callback) {
+        submit(() -> {
+            if (question == null || question.trim().isEmpty()) {
+                throw new IllegalArgumentException("Câu hỏi không được để trống");
+            }
+
+            // Gọi AI ở background thread để không chặn giao diện.
+            String response = aiClient.generalChat(question.trim());
+            if (response == null || response.trim().isEmpty()) {
+                throw new IllegalStateException("Dịch vụ AI chưa trả về nội dung");
+            }
+            return response.trim();
+        }, callback);
+    }
+
     /**
      * Đọc file một lần rồi tạo đủ summary, quiz và flashcard.
      */

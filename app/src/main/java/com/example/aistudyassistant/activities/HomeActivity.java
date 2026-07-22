@@ -99,7 +99,7 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, UploadDocumentActivity.class)));
 
         qaAskAi.setOnClickListener(v ->
-                startActivity(new Intent(this, ChatActivity.class)));
+                startActivity(new Intent(this, AIChatActivity.class)));
 
         qaQuiz.setOnClickListener(v ->
                 startActivity(new Intent(this, DocumentsActivity.class)));
@@ -171,7 +171,7 @@ public class HomeActivity extends AppCompatActivity {
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_chat) {
-                startActivity(new Intent(this, ChatActivity.class));
+                startActivity(new Intent(this, AIChatActivity.class));
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_profile) {
