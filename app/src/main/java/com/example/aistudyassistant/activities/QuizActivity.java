@@ -1,7 +1,6 @@
 package com.example.aistudyassistant.activities;
 
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
@@ -12,13 +11,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
-import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.QuizQuestion;
-import com.example.aistudyassistant.models.QuizResult;
+import com.example.aistudyassistant.repositories.AIContentRepository;
 import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
@@ -109,8 +107,32 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void loadQuestions() {
-        // TODO: Tải câu hỏi đã lưu ở task AI Quiz.
-        generateQuiz();
+        setLoading(true);
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        AIContentRepository.getInstance().getQuizQuestionsByDocument(
+                userId, documentId,
+                new ApiCallback<List<QuizQuestion>>() {
+            @Override
+            public void onSuccess(List<QuizQuestion> result) {
+                runOnUiThread(() -> {
+                    if (result.isEmpty()) {
+                        generateQuiz();
+                    } else {
+                        setLoading(false);
+                        showQuestions(result);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(QuizActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void generateQuiz() {
@@ -120,12 +142,7 @@ public class QuizActivity extends AppCompatActivity {
                 new ApiCallback<List<QuizQuestion>>() {
             @Override
             public void onSuccess(List<QuizQuestion> result) {
-                setLoading(false);
-                questions.clear();
-                questions.addAll(result);
-                currentIndex = 0;
-                correctCount = 0;
-                displayQuestion(0);
+                saveQuestions(result);
             }
 
             @Override
@@ -134,6 +151,39 @@ public class QuizActivity extends AppCompatActivity {
                 Toast.makeText(QuizActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void saveQuestions(List<QuizQuestion> generatedQuestions) {
+        AIContentRepository.getInstance().saveQuizQuestions(
+                buildDocument(), generatedQuestions,
+                new ApiCallback<List<QuizQuestion>>() {
+            @Override
+            public void onSuccess(List<QuizQuestion> savedQuestions) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    showQuestions(savedQuestions);
+                    Toast.makeText(QuizActivity.this,
+                            "Quiz saved", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(QuizActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showQuestions(List<QuizQuestion> loadedQuestions) {
+        questions.clear();
+        questions.addAll(loadedQuestions);
+        currentIndex = 0;
+        correctCount = 0;
+        displayQuestion(0);
     }
 
     private void displayQuestion(int index) {
@@ -161,7 +211,7 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void checkAnswer(String selected) {
-        if (hasAnswered) return;
+        if (hasAnswered || questions.isEmpty()) return;
         hasAnswered = true;
 
         QuizQuestion q = questions.get(currentIndex);

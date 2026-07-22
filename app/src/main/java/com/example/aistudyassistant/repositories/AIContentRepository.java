@@ -2,6 +2,8 @@ package com.example.aistudyassistant.repositories;
 
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.api.SupabaseClient;
+import com.example.aistudyassistant.models.Document;
+import com.example.aistudyassistant.models.QuizQuestion;
 import com.example.aistudyassistant.models.Summary;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.gson.JsonArray;
@@ -96,6 +98,68 @@ public class AIContentRepository {
         }).start();
     }
 
+    /**
+     * Lấy bộ câu hỏi đã lưu của một tài liệu.
+     */
+    public void getQuizQuestionsByDocument(String userId, String documentId,
+                                           ApiCallback<List<QuizQuestion>> callback) {
+        new Thread(() -> {
+            try {
+                if (isBlank(userId) || isBlank(documentId)) {
+                    callback.onError("Thiếu thông tin user hoặc tài liệu");
+                    return;
+                }
+
+                String query = "user_id=eq." + userId
+                        + "&document_id=eq." + documentId
+                        + "&order=created_at.asc,id.asc";
+                String response = supabaseClient.getFromTable(
+                        Constants.TABLE_QUIZZES, query);
+                if (response == null) {
+                    callback.onError("Không thể tải câu hỏi");
+                    return;
+                }
+
+                JsonArray rows = parseRows(response, "Không thể tải câu hỏi");
+                callback.onSuccess(parseQuizQuestions(rows));
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể đọc câu hỏi"));
+            }
+        }).start();
+    }
+
+    /**
+     * Bulk insert cả bộ câu hỏi sau khi AI sinh thành công.
+     */
+    public void saveQuizQuestions(Document document, List<QuizQuestion> questions,
+                                  ApiCallback<List<QuizQuestion>> callback) {
+        new Thread(() -> {
+            try {
+                validateQuizQuestions(document, questions);
+                JsonArray requestRows = new JsonArray();
+                for (QuizQuestion question : questions) {
+                    requestRows.add(buildQuizJson(document, question));
+                }
+
+                String response = supabaseClient.insertIntoTable(
+                        Constants.TABLE_QUIZZES, requestRows.toString());
+                if (response == null) {
+                    callback.onError("Không thể lưu bộ câu hỏi");
+                    return;
+                }
+
+                JsonArray savedRows = parseRows(response, "Không thể lưu bộ câu hỏi");
+                if (savedRows.size() != questions.size()) {
+                    callback.onError("Số câu hỏi đã lưu không khớp kết quả AI");
+                    return;
+                }
+                callback.onSuccess(parseQuizQuestions(savedRows));
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể lưu bộ câu hỏi"));
+            }
+        }).start();
+    }
+
     private JsonObject buildSummaryJson(Summary summary) {
         JsonObject json = new JsonObject();
         json.addProperty("user_id", summary.getUserId());
@@ -111,6 +175,25 @@ public class AIContentRepository {
         return json;
     }
 
+    private JsonObject buildQuizJson(Document document, QuizQuestion question) {
+        JsonObject json = new JsonObject();
+        json.addProperty("user_id", document.getUserId());
+        json.addProperty("document_id", document.getId());
+        if (!isBlank(document.getTopicId())) {
+            json.addProperty("topic_id", document.getTopicId());
+        }
+        json.addProperty("question", question.getQuestion());
+        json.addProperty("option_a", question.getOptionA());
+        json.addProperty("option_b", question.getOptionB());
+        json.addProperty("option_c", question.getOptionC());
+        json.addProperty("option_d", question.getOptionD());
+        json.addProperty("correct_answer", question.getCorrectAnswer());
+        // Bulk insert yêu cầu mọi row có cùng tập key.
+        json.addProperty("explanation", question.getExplanation());
+        json.addProperty("difficulty", "MEDIUM");
+        return json;
+    }
+
     private Summary parseSummary(JsonObject json) {
         Summary summary = new Summary();
         summary.setId(readString(json, "id"));
@@ -121,6 +204,27 @@ public class AIContentRepository {
         summary.setKeywords(readStringList(json, "keywords"));
         summary.setConclusion(readString(json, "conclusion"));
         return summary;
+    }
+
+    private List<QuizQuestion> parseQuizQuestions(JsonArray rows) {
+        List<QuizQuestion> questions = new ArrayList<>();
+        for (JsonElement row : rows) {
+            JsonObject json = row.getAsJsonObject();
+            QuizQuestion question = new QuizQuestion(
+                    readString(json, "question"),
+                    readString(json, "option_a"),
+                    readString(json, "option_b"),
+                    readString(json, "option_c"),
+                    readString(json, "option_d"),
+                    readString(json, "correct_answer"),
+                    readString(json, "explanation")
+            );
+            question.setId(readString(json, "id"));
+            question.setDocumentId(readString(json, "document_id"));
+            question.setOrderIndex(questions.size());
+            questions.add(question);
+        }
+        return questions;
     }
 
     private JsonArray toJsonArray(List<String> values) {
@@ -163,6 +267,24 @@ public class AIContentRepository {
                 || isBlank(summary.getDocumentId())
                 || isBlank(summary.getSummaryText())) {
             throw new IllegalArgumentException("Bản tóm tắt thiếu dữ liệu bắt buộc");
+        }
+    }
+
+    private void validateQuizQuestions(Document document,
+                                       List<QuizQuestion> questions) {
+        if (document == null || isBlank(document.getUserId())
+                || isBlank(document.getId()) || questions == null
+                || questions.isEmpty()) {
+            throw new IllegalArgumentException("Bộ câu hỏi thiếu dữ liệu bắt buộc");
+        }
+        for (QuizQuestion question : questions) {
+            if (question == null || isBlank(question.getQuestion())
+                    || isBlank(question.getOptionA()) || isBlank(question.getOptionB())
+                    || isBlank(question.getOptionC()) || isBlank(question.getOptionD())
+                    || isBlank(question.getCorrectAnswer())
+                    || !question.getCorrectAnswer().matches("[ABCD]")) {
+                throw new IllegalArgumentException("Có câu hỏi hoặc đáp án không hợp lệ");
+            }
         }
     }
 
