@@ -48,6 +48,9 @@ dependencies {
     // Gson for JSON parsing
     implementation 'com.google.code.gson:gson:2.10.1'
 
+    // Trích xuất văn bản từ PDF ngay trên Android.
+    implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+
     // Glide for image loading
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'

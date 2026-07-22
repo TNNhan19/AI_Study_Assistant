@@ -84,16 +84,7 @@ public class DocumentRepository {
     public void downloadDocument(Document document, File cacheDir, ApiCallback<File> callback) {
         new Thread(() -> {
             try {
-                if (document == null || document.getFilePath() == null
-                        || document.getFilePath().trim().isEmpty()) {
-                    callback.onError("Document path is missing");
-                    return;
-                }
-
-                byte[] fileBytes = supabaseClient.downloadFile(
-                        Constants.STORAGE_BUCKET,
-                        document.getFilePath()
-                );
+                byte[] fileBytes = downloadDocumentBytes(document);
                 if (fileBytes == null) {
                     callback.onError("Could not download document");
                     return;
@@ -120,6 +111,20 @@ public class DocumentRepository {
                 callback.onError(e.getMessage() != null ? e.getMessage() : "Could not cache document");
             }
         }).start();
+    }
+
+    /**
+     * Tải byte gốc của tài liệu. Hàm blocking nên chỉ gọi từ background thread.
+     */
+    public byte[] downloadDocumentBytes(Document document) {
+        if (document == null || document.getFilePath() == null
+                || document.getFilePath().trim().isEmpty()) {
+            return null;
+        }
+        return supabaseClient.downloadFile(
+                Constants.STORAGE_BUCKET,
+                document.getFilePath()
+        );
     }
 
     private String sanitizeExtension(String fileType) {

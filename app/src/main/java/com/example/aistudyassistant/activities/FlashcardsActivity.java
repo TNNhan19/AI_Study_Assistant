@@ -12,13 +12,13 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.AIClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Flashcard;
+import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +38,8 @@ public class FlashcardsActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentUrl;
+    private String documentType;
+    private String topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +49,8 @@ public class FlashcardsActivity extends AppCompatActivity {
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
         setupClickListeners();
@@ -118,62 +122,30 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void loadFlashcards() {
-        // TODO: Load from Supabase first
-        // If empty, show generate button
+        // TODO: Tải flashcard đã lưu ở task AI Flashcard.
     }
 
     private void generateFlashcards() {
         setLoading(true);
-
-        new Thread(() -> {
-            String documentText = "Sample document content."; // TODO: Load actual document
-            String responseJson = AIClient.getInstance().generateFlashcards(documentText, 15);
-
-            runOnUiThread(() -> {
+        AIProcessingService.getInstance(this).generateFlashcards(
+                buildDocument(), 15,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> result) {
                 setLoading(false);
-                if (responseJson != null) {
-                    parseFlashcards(responseJson);
-                } else {
-                    loadDemoFlashcards();
-                }
-            });
-        }).start();
-    }
-
-    private void parseFlashcards(String json) {
-        try {
-            String cleaned = json.trim();
-            if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
-            if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
-            if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
-
-            JsonArray array = JsonParser.parseString(cleaned.trim()).getAsJsonArray();
-            flashcards.clear();
-            for (int i = 0; i < array.size(); i++) {
-                JsonObject obj = array.get(i).getAsJsonObject();
-                flashcards.add(new Flashcard(
-                        obj.get("front").getAsString(),
-                        obj.get("back").getAsString()
-                ));
+                flashcards.clear();
+                flashcards.addAll(result);
+                currentIndex = 0;
+                displayCard(0);
+                updateProgressDots();
             }
-            currentIndex = 0;
-            displayCard(0);
-            updateProgressDots();
-        } catch (Exception e) {
-            loadDemoFlashcards();
-        }
-    }
 
-    private void loadDemoFlashcards() {
-        flashcards.clear();
-        flashcards.add(new Flashcard("What is TCP?",
-                "TCP (Transmission Control Protocol) is a connection-oriented protocol that ensures reliable data delivery."));
-        flashcards.add(new Flashcard("What is UDP?",
-                "UDP (User Datagram Protocol) is a connectionless protocol that is faster but does not guarantee delivery."));
-        flashcards.add(new Flashcard("What is the OSI model?",
-                "The OSI model is a conceptual framework with 7 layers: Physical, Data Link, Network, Transport, Session, Presentation, Application."));
-        displayCard(0);
-        updateProgressDots();
+            @Override
+            public void onError(String errorMessage) {
+                setLoading(false);
+                Toast.makeText(FlashcardsActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void displayCard(int index) {
@@ -231,5 +203,17 @@ public class FlashcardsActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         layoutLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
         flipCardContainer.setVisibility(loading ? View.GONE : View.VISIBLE);
+        btnGenerate.setEnabled(!loading);
+    }
+
+    private Document buildDocument() {
+        Document document = new Document();
+        document.setId(documentId);
+        document.setUserId(SharedPrefManager.getInstance(this).getUserId());
+        document.setName(documentName);
+        document.setFilePath(documentUrl);
+        document.setFileType(documentType);
+        document.setTopicId(topicId);
+        return document;
     }
 }

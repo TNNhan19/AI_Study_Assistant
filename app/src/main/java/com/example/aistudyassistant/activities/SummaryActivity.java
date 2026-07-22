@@ -10,15 +10,15 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.AIClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Summary;
+import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 public class SummaryActivity extends AppCompatActivity {
 
@@ -31,6 +31,8 @@ public class SummaryActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentUrl;
+    private String documentType;
+    private String topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +42,8 @@ public class SummaryActivity extends AppCompatActivity {
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
         setupClickListeners();
@@ -72,81 +76,57 @@ public class SummaryActivity extends AppCompatActivity {
 
     private void generateSummary() {
         setGenerating(true);
-
-        new Thread(() -> {
-            // TODO: First download/read the document text from Supabase Storage
-            // String documentText = downloadDocumentText(documentUrl);
-
-            // MOCK: Use placeholder for now
-            String documentText = "Sample document content. Replace this with actual document text.";
-
-            String responseJson = AIClient.getInstance().generateSummary(documentText);
-
-            runOnUiThread(() -> {
+        AIProcessingService.getInstance(this).createSummary(
+                buildDocument(),
+                new ApiCallback<Summary>() {
+            @Override
+            public void onSuccess(Summary result) {
                 setGenerating(false);
-                if (responseJson != null) {
-                    displaySummary(responseJson);
-                } else {
-                    Toast.makeText(this, "Failed to generate summary. Please try again.", Toast.LENGTH_SHORT).show();
-                }
-            });
-        }).start();
+                displaySummary(result);
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                setGenerating(false);
+                Toast.makeText(SummaryActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
-    private void displaySummary(String responseJson) {
-        try {
-            // Bỏ code fence để parse JSON do AI trả về.
-            String cleaned = responseJson.trim();
-            if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
-            if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
-            if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
-            cleaned = cleaned.trim();
+    private void displaySummary(Summary summary) {
+        tvSummaryText.setText(summary.getSummaryText());
 
-            JsonObject json = JsonParser.parseString(cleaned).getAsJsonObject();
-
-            // Summary
-            if (json.has("summary")) {
-                tvSummaryText.setText(json.get("summary").getAsString());
-            }
-
-            // Key Points
-            if (json.has("keyPoints")) {
-                layoutKeyPoints.removeAllViews();
-                JsonArray keyPoints = json.getAsJsonArray("keyPoints");
-                for (int i = 0; i < keyPoints.size(); i++) {
-                    TextView tv = new TextView(this);
-                    tv.setText("• " + keyPoints.get(i).getAsString());
-                    tv.setTextColor(getResources().getColor(R.color.text_primary));
-                    tv.setTextSize(14);
-                    tv.setPadding(0, 4, 0, 4);
-                    layoutKeyPoints.addView(tv);
-                }
-            }
-
-            // Keywords chips
-            if (json.has("keywords")) {
-                chipGroupKeywords.removeAllViews();
-                JsonArray keywords = json.getAsJsonArray("keywords");
-                for (int i = 0; i < keywords.size(); i++) {
-                    Chip chip = new Chip(this);
-                    chip.setText(keywords.get(i).getAsString());
-                    chip.setChipBackgroundColorResource(R.color.surface_variant);
-                    chip.setTextColor(getResources().getColor(R.color.primary));
-                    chipGroupKeywords.addView(chip);
-                }
-            }
-
-            // Conclusion
-            if (json.has("conclusion")) {
-                tvConclusion.setText(json.get("conclusion").getAsString());
-            }
-
-            // TODO: Save to Supabase
-
-        } catch (Exception e) {
-            // If JSON parsing fails, show raw text
-            tvSummaryText.setText(responseJson);
+        layoutKeyPoints.removeAllViews();
+        for (String keyPoint : summary.getKeyPoints()) {
+            TextView tv = new TextView(this);
+            tv.setText("• " + keyPoint);
+            tv.setTextColor(getResources().getColor(R.color.text_primary));
+            tv.setTextSize(14);
+            tv.setPadding(0, 4, 0, 4);
+            layoutKeyPoints.addView(tv);
         }
+
+        chipGroupKeywords.removeAllViews();
+        for (String keyword : summary.getKeywords()) {
+            Chip chip = new Chip(this);
+            chip.setText(keyword);
+            chip.setChipBackgroundColorResource(R.color.surface_variant);
+            chip.setTextColor(getResources().getColor(R.color.primary));
+            chipGroupKeywords.addView(chip);
+        }
+
+        tvConclusion.setText(summary.getConclusion());
+    }
+
+    private Document buildDocument() {
+        Document document = new Document();
+        document.setId(documentId);
+        document.setUserId(SharedPrefManager.getInstance(this).getUserId());
+        document.setName(documentName);
+        document.setFilePath(documentUrl);
+        document.setFileType(documentType);
+        document.setTopicId(topicId);
+        return document;
     }
 
     private void setGenerating(boolean generating) {

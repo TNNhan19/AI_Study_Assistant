@@ -44,6 +44,8 @@ public class Constants {
     public static final String EXTRA_DOCUMENT_NAME = "document_name";
     public static final String EXTRA_DOCUMENT_URL = "document_url";
     public static final String EXTRA_DOCUMENT_PATH = "document_path";
+    public static final String EXTRA_DOCUMENT_TYPE = "document_type";
+    public static final String EXTRA_TOPIC_ID = "topic_id";
     public static final String EXTRA_SCHEDULE_ID = "schedule_id";
     public static final String EXTRA_QUIZ_ID = "quiz_id";
 

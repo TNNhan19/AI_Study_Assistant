@@ -1,0 +1,319 @@
+package com.example.aistudyassistant.services;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.example.aistudyassistant.api.AIClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.AIProcessingResult;
+import com.example.aistudyassistant.models.Document;
+import com.example.aistudyassistant.models.DocumentAnalysis;
+import com.example.aistudyassistant.models.Flashcard;
+import com.example.aistudyassistant.models.QuizQuestion;
+import com.example.aistudyassistant.models.Summary;
+import com.example.aistudyassistant.repositories.DocumentRepository;
+import com.example.aistudyassistant.utils.DocumentTextExtractor;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Điều phối việc đọc tài liệu và sinh nội dung AI trên background thread.
+ */
+public class AIProcessingService {
+
+    private static final int MAX_FILE_BYTES = 25 * 1024 * 1024;
+    private static final int MAX_DOCUMENT_CHARS = 160_000;
+    private static final int DEFAULT_QUIZ_COUNT = 10;
+    private static final int DEFAULT_FLASHCARD_COUNT = 15;
+
+    private static AIProcessingService instance;
+
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final DocumentRepository documentRepository;
+    private final AIClient aiClient;
+
+    private AIProcessingService(Context context) {
+        PDFBoxResourceLoader.init(context.getApplicationContext());
+        documentRepository = DocumentRepository.getInstance();
+        aiClient = AIClient.getInstance();
+    }
+
+    public static synchronized AIProcessingService getInstance(Context context) {
+        if (instance == null) {
+            instance = new AIProcessingService(context);
+        }
+        return instance;
+    }
+
+    public void analyzeDocument(Document document, ApiCallback<DocumentAnalysis> callback) {
+        submit(() -> analyzeBlocking(document), callback);
+    }
+
+    public void createSummary(Document document, ApiCallback<Summary> callback) {
+        submit(() -> {
+            DocumentAnalysis analysis = analyzeBlocking(document);
+            return createSummaryBlocking(document, analysis);
+        }, callback);
+    }
+
+    public void generateQuiz(Document document, int questionCount,
+                             ApiCallback<List<QuizQuestion>> callback) {
+        submit(() -> {
+            validateCount(questionCount, 1, 30, "Số câu hỏi");
+            DocumentAnalysis analysis = analyzeBlocking(document);
+            return generateQuizBlocking(document, analysis, questionCount);
+        }, callback);
+    }
+
+    public void generateFlashcards(Document document, int cardCount,
+                                   ApiCallback<List<Flashcard>> callback) {
+        submit(() -> {
+            validateCount(cardCount, 1, 50, "Số flashcard");
+            DocumentAnalysis analysis = analyzeBlocking(document);
+            return generateFlashcardsBlocking(document, analysis, cardCount);
+        }, callback);
+    }
+
+    /**
+     * Đọc file một lần rồi tạo đủ summary, quiz và flashcard.
+     */
+    public void processDocument(Document document, ApiCallback<AIProcessingResult> callback) {
+        submit(() -> {
+            DocumentAnalysis analysis = analyzeBlocking(document);
+            Summary summary = createSummaryBlocking(document, analysis);
+            List<QuizQuestion> quiz = generateQuizBlocking(
+                    document, analysis, DEFAULT_QUIZ_COUNT);
+            List<Flashcard> flashcards = generateFlashcardsBlocking(
+                    document, analysis, DEFAULT_FLASHCARD_COUNT);
+            return new AIProcessingResult(analysis, summary, quiz, flashcards);
+        }, callback);
+    }
+
+    private DocumentAnalysis analyzeBlocking(Document document) throws Exception {
+        validateDocument(document);
+        byte[] fileBytes = documentRepository.downloadDocumentBytes(document);
+        if (fileBytes == null) {
+            throw new IllegalStateException("Không thể tải tài liệu từ Storage");
+        }
+        if (fileBytes.length > MAX_FILE_BYTES) {
+            throw new IllegalArgumentException("Tài liệu vượt quá giới hạn 25 MB");
+        }
+
+        String fileType = resolveFileType(document);
+        String extracted = normalizeText(DocumentTextExtractor.extract(fileBytes, fileType));
+        if (extracted.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Không tìm thấy văn bản; PDF dạng ảnh cần OCR ở bước phát triển sau");
+        }
+
+        boolean truncated = extracted.length() > MAX_DOCUMENT_CHARS;
+        String textForAi = truncated
+                ? extracted.substring(0, MAX_DOCUMENT_CHARS)
+                : extracted;
+        int wordCount = textForAi.split("\\s+").length;
+        return new DocumentAnalysis(
+                document.getId(), fileType, textForAi,
+                textForAi.length(), wordCount, truncated);
+    }
+
+    private Summary createSummaryBlocking(Document document,
+                                          DocumentAnalysis analysis) {
+        String rawResponse = aiClient.generateSummary(analysis.getText());
+        JsonObject json = parseObject(rawResponse, "tóm tắt");
+
+        Summary summary = new Summary();
+        summary.setUserId(document.getUserId());
+        summary.setDocumentId(document.getId());
+        summary.setSummaryText(requireString(json, "summary"));
+        summary.setKeyPoints(readStringList(json, "keyPoints"));
+        summary.setKeywords(readStringList(json, "keywords"));
+        summary.setConclusion(optionalString(json, "conclusion"));
+        return summary;
+    }
+
+    private List<QuizQuestion> generateQuizBlocking(Document document,
+                                                     DocumentAnalysis analysis,
+                                                     int questionCount) {
+        String rawResponse = aiClient.generateQuiz(analysis.getText(), questionCount);
+        JsonArray array = parseArray(rawResponse, "câu hỏi");
+        List<QuizQuestion> questions = new ArrayList<>();
+
+        for (JsonElement element : array) {
+            JsonObject json = element.getAsJsonObject();
+            String correctAnswer = requireString(json, "correctAnswer")
+                    .trim().toUpperCase(Locale.US);
+            if (!correctAnswer.matches("[ABCD]")) {
+                throw new IllegalStateException("AI trả về đáp án trắc nghiệm không hợp lệ");
+            }
+
+            QuizQuestion question = new QuizQuestion(
+                    requireString(json, "question"),
+                    requireString(json, "optionA"),
+                    requireString(json, "optionB"),
+                    requireString(json, "optionC"),
+                    requireString(json, "optionD"),
+                    correctAnswer,
+                    optionalString(json, "explanation")
+            );
+            question.setDocumentId(document.getId());
+            question.setOrderIndex(questions.size());
+            questions.add(question);
+        }
+
+        if (questions.isEmpty()) {
+            throw new IllegalStateException("AI không tạo được câu hỏi nào");
+        }
+        return questions;
+    }
+
+    private List<Flashcard> generateFlashcardsBlocking(Document document,
+                                                        DocumentAnalysis analysis,
+                                                        int cardCount) {
+        String rawResponse = aiClient.generateFlashcards(analysis.getText(), cardCount);
+        JsonArray array = parseArray(rawResponse, "flashcard");
+        List<Flashcard> flashcards = new ArrayList<>();
+
+        for (JsonElement element : array) {
+            JsonObject json = element.getAsJsonObject();
+            Flashcard flashcard = new Flashcard(
+                    requireString(json, "front"),
+                    requireString(json, "back")
+            );
+            flashcard.setUserId(document.getUserId());
+            flashcard.setDocumentId(document.getId());
+            flashcard.setTopicId(document.getTopicId());
+            flashcards.add(flashcard);
+        }
+
+        if (flashcards.isEmpty()) {
+            throw new IllegalStateException("AI không tạo được flashcard nào");
+        }
+        return flashcards;
+    }
+
+    private <T> void submit(BackgroundOperation<T> operation, ApiCallback<T> callback) {
+        if (callback == null) return;
+        executor.execute(() -> {
+            try {
+                T result = operation.run();
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception error) {
+                String message = error.getMessage();
+                if (message == null || message.trim().isEmpty()) {
+                    message = "Không thể xử lý tài liệu";
+                }
+                String finalMessage = message;
+                mainHandler.post(() -> callback.onError(finalMessage));
+            }
+        });
+    }
+
+    private void validateDocument(Document document) {
+        if (document == null || document.getFilePath() == null
+                || document.getFilePath().trim().isEmpty()) {
+            throw new IllegalArgumentException("Thiếu đường dẫn tài liệu");
+        }
+    }
+
+    private void validateCount(int count, int min, int max, String fieldName) {
+        if (count < min || count > max) {
+            throw new IllegalArgumentException(
+                    fieldName + " phải nằm trong khoảng " + min + "-" + max);
+        }
+    }
+
+    private String resolveFileType(Document document) {
+        if (document.getFileType() != null && !document.getFileType().trim().isEmpty()) {
+            return document.getFileType();
+        }
+        String path = document.getFilePath();
+        int lastDot = path.lastIndexOf('.');
+        return lastDot >= 0 ? path.substring(lastDot + 1) : "";
+    }
+
+    private String normalizeText(String text) {
+        if (text == null) return "";
+        return text.replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .replaceAll("[\\t\\x0B\\f ]+", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
+    }
+
+    private JsonObject parseObject(String raw, String resultName) {
+        JsonElement element = parseJson(raw, '{', '}', resultName);
+        if (!element.isJsonObject()) {
+            throw new IllegalStateException("AI trả về " + resultName + " sai định dạng");
+        }
+        return element.getAsJsonObject();
+    }
+
+    private JsonArray parseArray(String raw, String resultName) {
+        JsonElement element = parseJson(raw, '[', ']', resultName);
+        if (!element.isJsonArray()) {
+            throw new IllegalStateException("AI trả về " + resultName + " sai định dạng");
+        }
+        return element.getAsJsonArray();
+    }
+
+    private JsonElement parseJson(String raw, char opening, char closing,
+                                  String resultName) {
+        if (raw == null || raw.trim().isEmpty()) {
+            throw new IllegalStateException("Không nhận được " + resultName + " từ AI");
+        }
+        String cleaned = raw.trim();
+        int start = cleaned.indexOf(opening);
+        int end = cleaned.lastIndexOf(closing);
+        if (start < 0 || end < start) {
+            throw new IllegalStateException("AI trả về " + resultName + " sai định dạng");
+        }
+        try {
+            return JsonParser.parseString(cleaned.substring(start, end + 1));
+        } catch (Exception error) {
+            throw new IllegalStateException("Không thể đọc " + resultName + " do AI trả về");
+        }
+    }
+
+    private String requireString(JsonObject json, String key) {
+        String value = optionalString(json, key);
+        if (value.isEmpty()) {
+            throw new IllegalStateException("Phản hồi AI thiếu trường " + key);
+        }
+        return value;
+    }
+
+    private String optionalString(JsonObject json, String key) {
+        if (!json.has(key) || json.get(key).isJsonNull()) return "";
+        return json.get(key).getAsString().trim();
+    }
+
+    private List<String> readStringList(JsonObject json, String key) {
+        if (!json.has(key) || !json.get(key).isJsonArray()) {
+            return Collections.emptyList();
+        }
+        List<String> values = new ArrayList<>();
+        for (JsonElement element : json.getAsJsonArray(key)) {
+            if (element.isJsonPrimitive()) {
+                String value = element.getAsString().trim();
+                if (!value.isEmpty()) values.add(value);
+            }
+        }
+        return values;
+    }
+
+    private interface BackgroundOperation<T> {
+        T run() throws Exception;
+    }
+}
