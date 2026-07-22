@@ -13,6 +13,7 @@ import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Summary;
+import com.example.aistudyassistant.repositories.AIContentRepository;
 import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
@@ -33,6 +34,7 @@ public class SummaryActivity extends AppCompatActivity {
     private String documentUrl;
     private String documentType;
     private String topicId;
+    private Summary currentSummary;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,9 +71,29 @@ public class SummaryActivity extends AppCompatActivity {
     }
 
     private void loadExistingSummary() {
-        // TODO: Load existing summary from Supabase
-        // If exists, display it
-        // Otherwise, show generate button
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        setLoadingExisting(true);
+        AIContentRepository.getInstance().getSummaryByDocument(
+                userId, documentId,
+                new ApiCallback<Summary>() {
+            @Override
+            public void onSuccess(Summary result) {
+                runOnUiThread(() -> {
+                    currentSummary = result;
+                    setLoadingExisting(false);
+                    if (result != null) displaySummary(result);
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoadingExisting(false);
+                    Toast.makeText(SummaryActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void generateSummary() {
@@ -81,14 +103,42 @@ public class SummaryActivity extends AppCompatActivity {
                 new ApiCallback<Summary>() {
             @Override
             public void onSuccess(Summary result) {
-                setGenerating(false);
-                displaySummary(result);
+                // Giữ id cũ để Generate lại sẽ PATCH thay vì INSERT trùng.
+                if (currentSummary != null) result.setId(currentSummary.getId());
+                setBusy(true, "Saving...");
+                saveSummary(result);
             }
 
             @Override
             public void onError(String errorMessage) {
                 setGenerating(false);
                 Toast.makeText(SummaryActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void saveSummary(Summary summary) {
+        AIContentRepository.getInstance().saveSummary(
+                summary,
+                new ApiCallback<Summary>() {
+            @Override
+            public void onSuccess(Summary savedSummary) {
+                runOnUiThread(() -> {
+                    currentSummary = savedSummary;
+                    setGenerating(false);
+                    displaySummary(savedSummary);
+                    Toast.makeText(SummaryActivity.this,
+                            "Summary saved", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setGenerating(false);
+                    Toast.makeText(SummaryActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
             }
         });
     }
@@ -130,8 +180,22 @@ public class SummaryActivity extends AppCompatActivity {
     }
 
     private void setGenerating(boolean generating) {
-        layoutLoading.setVisibility(generating ? View.VISIBLE : View.GONE);
-        btnGenerate.setEnabled(!generating);
-        btnGenerate.setText(generating ? "Generating..." : "Generate");
+        setBusy(generating, generating ? "Generating..." : null);
+    }
+
+    private void setBusy(boolean busy, String busyText) {
+        layoutLoading.setVisibility(busy ? View.VISIBLE : View.GONE);
+        btnGenerate.setEnabled(!busy);
+        btnGenerate.setText(busy
+                ? busyText
+                : currentSummary == null ? "Generate" : "Regenerate");
+    }
+
+    private void setLoadingExisting(boolean loading) {
+        // Chỉ khóa nút khi đọc DB, không hiện animation đang gọi AI.
+        btnGenerate.setEnabled(!loading);
+        btnGenerate.setText(loading
+                ? "Loading..."
+                : currentSummary == null ? "Generate" : "Regenerate");
     }
 }
