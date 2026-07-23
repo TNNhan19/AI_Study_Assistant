@@ -59,6 +59,10 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
     }
 
     public void updateDocuments(List<Document> newDocs) {
+        if (documents == newDocs) {
+            notifyDataSetChanged();
+            return;
+        }
         documents.clear();
         documents.addAll(newDocs);
         notifyDataSetChanged();

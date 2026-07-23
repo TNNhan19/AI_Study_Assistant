@@ -14,11 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.text.ParseException;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 public class DocumentRepository {
 
@@ -96,32 +94,9 @@ public class DocumentRepository {
         JsonArray jsonArray = JsonParser.parseString(response).getAsJsonArray();
         List<Document> documents = new ArrayList<>();
         for (JsonElement element : jsonArray) {
-            documents.add(parseDocument(element.getAsJsonObject()));
+            documents.add(mapDocument(element.getAsJsonObject()));
         }
         return documents;
-    }
-
-    private Document parseDocument(JsonObject obj) {
-        Document document = new Document();
-        document.setId(obj.get("id").getAsString());
-        document.setUserId(obj.get("user_id").getAsString());
-        document.setName(obj.get("name").getAsString());
-        document.setFilePath(obj.get("file_path").getAsString());
-        document.setFileType(obj.has("file_type") && !obj.get("file_type").isJsonNull()
-                ? obj.get("file_type").getAsString() : "pdf");
-        document.setFileSize(obj.has("file_size") && !obj.get("file_size").isJsonNull()
-                ? obj.get("file_size").getAsLong() : 0);
-        document.setStatus(obj.has("status") && !obj.get("status").isJsonNull()
-                ? obj.get("status").getAsString() : Constants.STATUS_UPLOADED);
-        document.setFavorite(obj.has("is_favorite") && !obj.get("is_favorite").isJsonNull()
-                && obj.get("is_favorite").getAsBoolean());
-        if (obj.has("project_id") && !obj.get("project_id").isJsonNull()) {
-            document.setProjectId(obj.get("project_id").getAsString());
-        }
-        if (obj.has("topic_id") && !obj.get("topic_id").isJsonNull()) {
-            document.setTopicId(obj.get("topic_id").getAsString());
-        }
-        return document;
     }
 
     /**
@@ -231,7 +206,7 @@ public class DocumentRepository {
         }).start();
     }
 
-    private Document mapDocument(JsonObject obj) throws ParseException {
+    private Document mapDocument(JsonObject obj) {
         Document document = new Document();
         document.setId(obj.get("id").getAsString());
         document.setUserId(obj.get("user_id").getAsString());
@@ -253,8 +228,7 @@ public class DocumentRepository {
 
         long createdAt = parseSupabaseTimestamp(obj, "created_at");
         document.setCreatedAt(createdAt);
-        document.setUpdatedAt(obj.has("updated_at") && !obj.get("updated_at").isJsonNull()
-                ? parseSupabaseTimestamp(obj, "updated_at") : createdAt);
+        document.setUpdatedAt(parseSupabaseTimestamp(obj, "updated_at", createdAt));
         return document;
     }
 
@@ -263,54 +237,60 @@ public class DocumentRepository {
                 ? obj.get(field).getAsString() : defaultValue;
     }
 
-    private long parseSupabaseTimestamp(JsonObject obj, String field) throws ParseException {
-        if (!obj.has(field) || obj.get(field).isJsonNull()) {
-            throw new ParseException("Missing document timestamp: " + field, 0);
-        }
-
-        String timestamp = obj.get(field).getAsString();
-        String normalized = normalizeFractionalSeconds(timestamp);
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US);
-        format.setLenient(false);
-        ParsePosition position = new ParsePosition(0);
-        Date parsed = format.parse(normalized, position);
-        if (parsed == null || position.getIndex() != normalized.length()) {
-            throw new ParseException("Invalid document timestamp: " + timestamp,
-                    Math.max(position.getErrorIndex(), 0));
-        }
-        return parsed.getTime();
+    private long parseSupabaseTimestamp(JsonObject obj, String field) {
+        return parseSupabaseTimestamp(obj, field, System.currentTimeMillis());
     }
 
-    private String normalizeFractionalSeconds(String timestamp) throws ParseException {
-        int timeSeparator = timestamp.indexOf('T');
-        if (timeSeparator < 0) {
-            throw new ParseException("Invalid document timestamp: " + timestamp, 0);
+    private long parseSupabaseTimestamp(JsonObject obj, String field, long fallback) {
+        if (!obj.has(field) || obj.get(field).isJsonNull()) {
+            return fallback;
         }
 
-        int zoneStart = timestamp.endsWith("Z") ? timestamp.length() - 1 : -1;
-        if (zoneStart < 0) {
-            int plus = timestamp.indexOf('+', timeSeparator);
-            int minus = timestamp.indexOf('-', timeSeparator);
-            zoneStart = plus >= 0 ? plus : minus;
-        }
-        if (zoneStart < 0) {
-            throw new ParseException("Timestamp has no timezone: " + timestamp, timestamp.length());
+        String value = obj.get(field).getAsString();
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
         }
 
-        int fractionStart = timestamp.indexOf('.', timeSeparator);
-        if (fractionStart < 0 || fractionStart > zoneStart) {
-            return timestamp.substring(0, zoneStart) + ".000" + timestamp.substring(zoneStart);
+        value = normalizeTimestampFraction(value.trim());
+        String[] patterns = {
+                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                "yyyy-MM-dd'T'HH:mm:ssXXX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss"
+        };
+
+        for (String pattern : patterns) {
+            try {
+                SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.US);
+                format.setTimeZone(TimeZone.getTimeZone("UTC"));
+                return format.parse(value).getTime();
+            } catch (Exception ignored) {
+                // Try the next supported Supabase timestamp shape.
+            }
+        }
+        return fallback;
+    }
+
+    private String normalizeTimestampFraction(String value) {
+        int dotIndex = value.indexOf('.');
+        if (dotIndex < 0) return value;
+
+        int fractionStart = dotIndex + 1;
+        int fractionEnd = fractionStart;
+        while (fractionEnd < value.length() && Character.isDigit(value.charAt(fractionEnd))) {
+            fractionEnd++;
         }
 
-        String fraction = timestamp.substring(fractionStart + 1, zoneStart);
-        if (fraction.length() >= 3) {
+        String fraction = value.substring(fractionStart, fractionEnd);
+        if (fraction.length() > 3) {
             fraction = fraction.substring(0, 3);
         } else {
-            StringBuilder padded = new StringBuilder(fraction);
-            while (padded.length() < 3) padded.append('0');
-            fraction = padded.toString();
+            while (fraction.length() < 3) {
+                fraction += "0";
+            }
         }
-        return timestamp.substring(0, fractionStart + 1) + fraction + timestamp.substring(zoneStart);
+
+        return value.substring(0, fractionStart) + fraction + value.substring(fractionEnd);
     }
 
     public void deleteDocument(Document document, ApiCallback<Boolean> callback) {

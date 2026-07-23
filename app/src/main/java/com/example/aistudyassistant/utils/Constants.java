@@ -23,7 +23,6 @@ public class Constants {
     public static final String TABLE_CHAT_MESSAGES = "chat_messages";
     public static final String TABLE_CHAT_HISTORY = "chat_history";
     public static final String TABLE_SCHEDULES = "schedules";
-
     // Supabase Storage Bucket
     public static final String STORAGE_BUCKET = "documents";
 

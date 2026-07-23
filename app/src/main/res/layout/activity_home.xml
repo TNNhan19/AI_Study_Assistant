@@ -309,6 +309,224 @@
                 android:padding="@dimen/spacing_lg"
                 android:visibility="gone"/>
 
+            <!-- Latest Quiz Result -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/spacing_lg"
+                android:paddingEnd="@dimen/spacing_lg"
+                android:paddingTop="@dimen/spacing_lg">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/latest_quiz_result"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_xl"
+                        android:fontFamily="sans-serif-medium"/>
+
+                    <TextView
+                        android:id="@+id/tv_see_all_quiz_results"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/see_all"
+                        android:textColor="@color/primary"
+                        android:textSize="@dimen/text_md"/>
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_latest_quiz_result"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:visibility="gone"
+                    app:cardCornerRadius="@dimen/card_radius"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="@color/surface">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:id="@+id/tv_latest_quiz_document"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_document_format"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/text_md"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:id="@+id/tv_latest_quiz_folder"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/quiz_folder_format"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_latest_quiz_score"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_sm"
+                            android:text="@string/quiz_score_format"
+                            android:textColor="@color/primary"
+                            android:textSize="@dimen/text_lg"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="@dimen/spacing_xs">
+
+                            <TextView
+                                android:id="@+id/tv_latest_quiz_correct"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/quiz_correct_format"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_md"/>
+
+                            <TextView
+                                android:id="@+id/tv_latest_quiz_wrong"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/quiz_wrong_format"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_md"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <TextView
+                    android:id="@+id/tv_no_quiz_result"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/no_quiz_result"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_md"
+                    android:gravity="center"
+                    android:padding="@dimen/spacing_lg"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
+            <!-- Latest Flashcard Set -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/spacing_lg"
+                android:paddingEnd="@dimen/spacing_lg"
+                android:paddingTop="@dimen/spacing_lg">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/latest_flashcard_set"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_xl"
+                        android:fontFamily="sans-serif-medium"/>
+
+                    <TextView
+                        android:id="@+id/tv_see_all_flashcard_history"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/see_all"
+                        android:textColor="@color/primary"
+                        android:textSize="@dimen/text_md"/>
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_latest_flashcard_set"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:visibility="gone"
+                    app:cardCornerRadius="@dimen/card_radius"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="@color/surface">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:id="@+id/tv_latest_flashcard_document"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_document_format"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/text_md"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:id="@+id/tv_latest_flashcard_folder"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/quiz_folder_format"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_latest_flashcard_count"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_sm"
+                            android:text="@string/flashcard_count_format"
+                            android:textColor="@color/primary"
+                            android:textSize="@dimen/text_lg"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:id="@+id/tv_latest_flashcard_created_at"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_xs"
+                            android:text="@string/quiz_unknown_time"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_sm"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <TextView
+                    android:id="@+id/tv_no_flashcard_history"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/no_flashcard_history"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_md"
+                    android:gravity="center"
+                    android:padding="@dimen/spacing_lg"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
             <View android:layout_width="match_parent" android:layout_height="80dp"/>
         </LinearLayout>
     </ScrollView>
