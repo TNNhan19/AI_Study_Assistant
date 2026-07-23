@@ -29,6 +29,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     public interface OnScheduleClickListener {
         void onScheduleClick(Schedule schedule);
         void onScheduleDelete(Schedule schedule, int position);
+        void onScheduleCompleted(Schedule schedule, int position, boolean completed);
     }
 
     public ScheduleAdapter(Context context, List<Schedule> schedules) {
@@ -78,8 +79,8 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     }
 
     class ScheduleViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTime, tvAmPm, tvTitle, tvDescription, tvDate;
-        ImageButton btnDelete;
+        TextView tvTime, tvAmPm, tvTitle, tvDescription, tvDate, tvStatus;
+        ImageButton btnDelete, btnComplete;
 
         ScheduleViewHolder(View itemView) {
             super(itemView);
@@ -88,7 +89,9 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvDescription = itemView.findViewById(R.id.tv_description);
             tvDate = itemView.findViewById(R.id.tv_date);
+            tvStatus = itemView.findViewById(R.id.tv_status);
             btnDelete = itemView.findViewById(R.id.btn_delete);
+            btnComplete = itemView.findViewById(R.id.btn_complete);
         }
 
         void bind(Schedule schedule, int position) {
@@ -106,13 +109,25 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
                     ? schedule.getDescription() : "No description");
             tvDate.setText(new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                     .format(new Date(schedule.getDateTimeMillis())));
+            tvStatus.setText(schedule.isCompleted()
+                    ? context.getString(R.string.schedule_completed)
+                    : context.getString(R.string.schedule_pending));
+            btnComplete.setContentDescription(schedule.isCompleted()
+                    ? context.getString(R.string.mark_pending)
+                    : context.getString(R.string.mark_completed));
             btnDelete.setVisibility(showDeleteButton ? View.VISIBLE : View.GONE);
+            btnComplete.setVisibility(showDeleteButton ? View.VISIBLE : View.GONE);
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onScheduleClick(schedule);
             });
             btnDelete.setOnClickListener(v -> {
                 if (listener != null) listener.onScheduleDelete(schedule, position);
+            });
+            btnComplete.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onScheduleCompleted(schedule, position, !schedule.isCompleted());
+                }
             });
         }
     }

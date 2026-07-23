@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.adapters.ScheduleAdapter;
 import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Schedule;
 import com.example.aistudyassistant.repositories.ScheduleRepository;
 import com.example.aistudyassistant.utils.SharedPrefManager;
@@ -39,6 +40,9 @@ public class ScheduleActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
+        SupabaseClient.getInstance().setAccessToken(
+                SharedPrefManager.getInstance(this).getAccessToken()
+        );
         initViews();
         setupRecyclerView();
         setupBottomNavigation();
@@ -60,15 +64,23 @@ public class ScheduleActivity extends AppCompatActivity {
         adapter.setListener(new ScheduleAdapter.OnScheduleClickListener() {
             @Override
             public void onScheduleClick(Schedule schedule) {
-                // TODO: Open edit schedule screen
                 Intent intent = new Intent(ScheduleActivity.this, CreateScheduleActivity.class);
-                intent.putExtra("schedule_id", schedule.getId());
+                intent.putExtra(CreateScheduleActivity.EXTRA_SCHEDULE_ID, schedule.getId());
+                intent.putExtra(CreateScheduleActivity.EXTRA_SCHEDULE_TITLE, schedule.getTitle());
+                intent.putExtra(CreateScheduleActivity.EXTRA_SCHEDULE_DESCRIPTION, schedule.getDescription());
+                intent.putExtra(CreateScheduleActivity.EXTRA_SCHEDULE_TIME, schedule.getDateTimeMillis());
+                intent.putExtra(CreateScheduleActivity.EXTRA_SCHEDULE_COMPLETED, schedule.isCompleted());
                 startActivity(intent);
             }
 
             @Override
             public void onScheduleDelete(Schedule schedule, int position) {
                 confirmDelete(schedule, position);
+            }
+
+            @Override
+            public void onScheduleCompleted(Schedule schedule, int position, boolean completed) {
+                updateCompleted(schedule, completed);
             }
         });
         rvSchedules.setLayoutManager(new LinearLayoutManager(this));
@@ -81,9 +93,9 @@ public class ScheduleActivity extends AppCompatActivity {
                 .setMessage("Delete \"" + schedule.getTitle() + "\"?")
                 .setPositiveButton("Delete", (dialog, which) -> {
                     cancelAlarm(schedule);
-                    ScheduleRepository.getInstance().deleteSchedule(schedule.getId(), new ApiCallback<Boolean>() {
+                    ScheduleRepository.getInstance().deleteSchedule(schedule.getId(), new ApiCallback<Void>() {
                         @Override
-                        public void onSuccess(Boolean result) {
+                        public void onSuccess(Void result) {
                             runOnUiThread(() -> {
                                 adapter.removeAt(position);
                                 updateEmptyState();
@@ -122,7 +134,7 @@ public class ScheduleActivity extends AppCompatActivity {
             return;
         }
 
-        ScheduleRepository.getInstance().getUpcomingSchedules(userId, new ApiCallback<List<Schedule>>() {
+        ScheduleRepository.getInstance().getSchedulesByUser(userId, new ApiCallback<List<Schedule>>() {
             @Override
             public void onSuccess(List<Schedule> result) {
                 runOnUiThread(() -> {
@@ -143,6 +155,39 @@ public class ScheduleActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void updateCompleted(Schedule schedule, boolean completed) {
+        ScheduleRepository.getInstance().markScheduleCompleted(
+                schedule.getId(),
+                completed,
+                new ApiCallback<Schedule>() {
+                    @Override
+                    public void onSuccess(Schedule result) {
+                        runOnUiThread(() -> {
+                            schedule.setCompleted(result.isCompleted());
+                            if (result.isCompleted()) {
+                                cancelAlarm(result);
+                            }
+                            adapter.notifyDataSetChanged();
+                            Toast.makeText(
+                                    ScheduleActivity.this,
+                                    completed ? "Schedule completed" : "Schedule marked pending",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        });
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() -> Toast.makeText(
+                                ScheduleActivity.this,
+                                "Could not update schedule: " + errorMessage,
+                                Toast.LENGTH_LONG
+                        ).show());
+                    }
+                }
+        );
     }
 
     private void updateEmptyState() {

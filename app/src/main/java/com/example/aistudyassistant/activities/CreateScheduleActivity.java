@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Schedule;
 import com.example.aistudyassistant.repositories.ScheduleRepository;
 import com.example.aistudyassistant.receivers.AlarmReceiver;
@@ -40,8 +41,14 @@ import java.util.Locale;
 
 public class CreateScheduleActivity extends AppCompatActivity {
 
+    public static final String EXTRA_SCHEDULE_ID = "schedule_id";
+    public static final String EXTRA_SCHEDULE_TITLE = "schedule_title";
+    public static final String EXTRA_SCHEDULE_DESCRIPTION = "schedule_description";
+    public static final String EXTRA_SCHEDULE_TIME = "schedule_time";
+    public static final String EXTRA_SCHEDULE_COMPLETED = "schedule_completed";
+
     private TextInputEditText etTitle, etDescription;
-    private TextView tvDate, tvTime;
+    private TextView tvHeaderTitle, tvDate, tvTime;
     private LinearLayout layoutDatePicker, layoutTimePicker;
     private SwitchMaterial switchReminder;
     private MaterialButton btnSave;
@@ -52,16 +59,23 @@ public class CreateScheduleActivity extends AppCompatActivity {
     private boolean dateSelected = false;
     private boolean timeSelected = false;
     private boolean pendingSaveAfterNotificationPermission = false;
+    private String editingScheduleId;
+    private boolean editingScheduleCompleted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_schedule);
+        SupabaseClient.getInstance().setAccessToken(
+                SharedPrefManager.getInstance(this).getAccessToken()
+        );
         initViews();
         setupClickListeners();
+        loadScheduleForEditIfNeeded();
     }
 
     private void initViews() {
+        tvHeaderTitle = findViewById(R.id.tv_title);
         etTitle = findViewById(R.id.et_title);
         etDescription = findViewById(R.id.et_description);
         tvDate = findViewById(R.id.tv_date);
@@ -129,10 +143,6 @@ public class CreateScheduleActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select a time", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (selectedDateTime.getTimeInMillis() <= System.currentTimeMillis()) {
-            Toast.makeText(this, "Please select a future date and time", Toast.LENGTH_SHORT).show();
-            return;
-        }
         if (switchReminder.isChecked() && !hasNotificationPermission()) {
             pendingSaveAfterNotificationPermission = true;
             ActivityCompat.requestPermissions(
@@ -163,16 +173,27 @@ public class CreateScheduleActivity extends AppCompatActivity {
             return;
         }
         schedule.setUserId(userId);
+        schedule.setId(editingScheduleId);
+        schedule.setCompleted(editingScheduleCompleted);
 
-        ScheduleRepository.getInstance().createSchedule(schedule, new ApiCallback<Schedule>() {
+        ApiCallback<Schedule> callback = new ApiCallback<Schedule>() {
             @Override
             public void onSuccess(Schedule savedSchedule) {
                 runOnUiThread(() -> {
                     setLoading(false);
-                    if (savedSchedule.isReminderEnabled()) {
+                    if (isEditing()) {
+                        cancelAlarm(savedSchedule);
+                    }
+                    if (savedSchedule.isReminderEnabled()
+                            && !savedSchedule.isCompleted()
+                            && savedSchedule.getDateTimeMillis() > System.currentTimeMillis()) {
                         scheduleAlarm(savedSchedule);
                     }
-                    Toast.makeText(CreateScheduleActivity.this, "Schedule saved!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(
+                            CreateScheduleActivity.this,
+                            isEditing() ? "Schedule updated!" : "Schedule saved!",
+                            Toast.LENGTH_SHORT
+                    ).show();
                     finish();
                 });
             }
@@ -188,7 +209,68 @@ public class CreateScheduleActivity extends AppCompatActivity {
                     ).show();
                 });
             }
+        };
+
+        if (isEditing()) {
+            ScheduleRepository.getInstance().updateSchedule(schedule, callback);
+        } else {
+            ScheduleRepository.getInstance().createSchedule(schedule, callback);
+        }
+    }
+
+    private void loadScheduleForEditIfNeeded() {
+        Intent intent = getIntent();
+        editingScheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID);
+        if (TextUtils.isEmpty(editingScheduleId)) return;
+
+        tvHeaderTitle.setText("Edit Schedule");
+        btnSave.setText("Update Schedule");
+
+        long scheduleTime = intent.getLongExtra(EXTRA_SCHEDULE_TIME, 0);
+        if (scheduleTime > 0) {
+            Schedule schedule = new Schedule();
+            schedule.setId(editingScheduleId);
+            schedule.setTitle(intent.getStringExtra(EXTRA_SCHEDULE_TITLE));
+            schedule.setDescription(intent.getStringExtra(EXTRA_SCHEDULE_DESCRIPTION));
+            schedule.setDateTimeMillis(scheduleTime);
+            schedule.setCompleted(intent.getBooleanExtra(EXTRA_SCHEDULE_COMPLETED, false));
+            populateSchedule(schedule);
+            return;
+        }
+
+        ScheduleRepository.getInstance().getScheduleById(editingScheduleId, new ApiCallback<Schedule>() {
+            @Override
+            public void onSuccess(Schedule result) {
+                if (result == null) return;
+                runOnUiThread(() -> populateSchedule(result));
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> Toast.makeText(
+                        CreateScheduleActivity.this,
+                        "Could not load schedule: " + errorMessage,
+                        Toast.LENGTH_LONG
+                ).show());
+            }
         });
+    }
+
+    private void populateSchedule(Schedule schedule) {
+        etTitle.setText(schedule.getTitle());
+        etDescription.setText(schedule.getDescription());
+        selectedDateTime.setTimeInMillis(schedule.getDateTimeMillis());
+        editingScheduleCompleted = schedule.isCompleted();
+        dateSelected = true;
+        timeSelected = true;
+        tvDate.setText(new SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+                .format(selectedDateTime.getTime()));
+        tvTime.setText(new SimpleDateFormat("h:mm a", Locale.getDefault())
+                .format(selectedDateTime.getTime()));
+    }
+
+    private boolean isEditing() {
+        return !TextUtils.isEmpty(editingScheduleId);
     }
 
     private void scheduleAlarm(Schedule schedule) {
@@ -221,6 +303,20 @@ public class CreateScheduleActivity extends AppCompatActivity {
                     schedule.getDateTimeMillis(),
                     pendingIntent);
         }
+    }
+
+    private void cancelAlarm(Schedule schedule) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) return;
+
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                schedule.getAlarmRequestCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        alarmManager.cancel(pendingIntent);
     }
 
     private boolean hasNotificationPermission() {

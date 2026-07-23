@@ -7,6 +7,7 @@ public class Schedule {
     private String description;
     private long dateTimeMillis;   // Combined date + time in milliseconds
     private boolean reminderEnabled;
+    private boolean completed;
     private long createdAt;
 
     public Schedule() {}
@@ -26,6 +27,7 @@ public class Schedule {
     public String getDescription() { return description; }
     public long getDateTimeMillis() { return dateTimeMillis; }
     public boolean isReminderEnabled() { return reminderEnabled; }
+    public boolean isCompleted() { return completed; }
     public long getCreatedAt() { return createdAt; }
 
     // Setters
@@ -35,6 +37,7 @@ public class Schedule {
     public void setDescription(String description) { this.description = description; }
     public void setDateTimeMillis(long dateTimeMillis) { this.dateTimeMillis = dateTimeMillis; }
     public void setReminderEnabled(boolean reminderEnabled) { this.reminderEnabled = reminderEnabled; }
+    public void setCompleted(boolean completed) { this.completed = completed; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 
     /** Check if schedule is in the future */
