@@ -4,6 +4,7 @@ import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -12,13 +13,14 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Flashcard;
+import com.example.aistudyassistant.repositories.AIContentRepository;
+import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +29,7 @@ public class FlashcardsActivity extends AppCompatActivity {
 
     private TextView tvCardCount, tvFrontText, tvBackText;
     private LinearLayout cardFront, cardBack, layoutLoading, layoutProgressDots;
-    private LinearLayout flipCardContainer;
+    private FrameLayout flipCardContainer;
     private MaterialButton btnPrev, btnNext, btnKnown, btnUnknown, btnGenerate;
     private ImageButton btnBack;
 
@@ -38,6 +40,8 @@ public class FlashcardsActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentUrl;
+    private String documentType;
+    private String topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +51,8 @@ public class FlashcardsActivity extends AppCompatActivity {
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
         setupClickListeners();
@@ -118,60 +124,82 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void loadFlashcards() {
-        // TODO: Load from Supabase first
-        // If empty, show generate button
+        setLoading(true);
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        AIContentRepository.getInstance().getFlashcardsByDocument(
+                userId, documentId,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> result) {
+                runOnUiThread(() -> {
+                    showFlashcards(result);
+                    setLoading(false);
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void generateFlashcards() {
         setLoading(true);
-
-        new Thread(() -> {
-            String documentText = "Sample document content."; // TODO: Load actual document
-            String responseJson = GeminiClient.getInstance().generateFlashcards(documentText, 15);
-
-            runOnUiThread(() -> {
-                setLoading(false);
-                if (responseJson != null) {
-                    parseFlashcards(responseJson);
-                } else {
-                    loadDemoFlashcards();
-                }
-            });
-        }).start();
-    }
-
-    private void parseFlashcards(String json) {
-        try {
-            String cleaned = json.trim();
-            if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
-            if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
-            if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
-
-            JsonArray array = JsonParser.parseString(cleaned.trim()).getAsJsonArray();
-            flashcards.clear();
-            for (int i = 0; i < array.size(); i++) {
-                JsonObject obj = array.get(i).getAsJsonObject();
-                flashcards.add(new Flashcard(
-                        obj.get("front").getAsString(),
-                        obj.get("back").getAsString()
-                ));
+        AIProcessingService.getInstance(this).generateFlashcards(
+                buildDocument(), 15,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> result) {
+                saveFlashcards(result);
             }
-            currentIndex = 0;
-            displayCard(0);
-            updateProgressDots();
-        } catch (Exception e) {
-            loadDemoFlashcards();
-        }
+
+            @Override
+            public void onError(String errorMessage) {
+                setLoading(false);
+                Toast.makeText(FlashcardsActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
-    private void loadDemoFlashcards() {
+    private void saveFlashcards(List<Flashcard> generatedFlashcards) {
+        AIContentRepository.getInstance().saveFlashcards(
+                buildDocument(), generatedFlashcards,
+                new ApiCallback<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> savedFlashcards) {
+                runOnUiThread(() -> {
+                    showFlashcards(savedFlashcards);
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            "Flashcards saved", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(FlashcardsActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showFlashcards(List<Flashcard> loadedFlashcards) {
         flashcards.clear();
-        flashcards.add(new Flashcard("What is TCP?",
-                "TCP (Transmission Control Protocol) is a connection-oriented protocol that ensures reliable data delivery."));
-        flashcards.add(new Flashcard("What is UDP?",
-                "UDP (User Datagram Protocol) is a connectionless protocol that is faster but does not guarantee delivery."));
-        flashcards.add(new Flashcard("What is the OSI model?",
-                "The OSI model is a conceptual framework with 7 layers: Physical, Data Link, Network, Transport, Session, Presentation, Application."));
+        flashcards.addAll(loadedFlashcards);
+        currentIndex = 0;
+        if (flashcards.isEmpty()) {
+            tvCardCount.setText("No cards yet");
+            layoutProgressDots.removeAllViews();
+            return;
+        }
         displayCard(0);
         updateProgressDots();
     }
@@ -196,6 +224,7 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void flipCard() {
+        if (flashcards.isEmpty()) return;
         if (isShowingFront) {
             cardFront.setVisibility(View.GONE);
             cardBack.setVisibility(View.VISIBLE);
@@ -229,7 +258,26 @@ public class FlashcardsActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
+        boolean hasCards = !flashcards.isEmpty();
         layoutLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
-        flipCardContainer.setVisibility(loading ? View.GONE : View.VISIBLE);
+        flipCardContainer.setVisibility(!loading && hasCards ? View.VISIBLE : View.GONE);
+        layoutProgressDots.setVisibility(!loading && hasCards ? View.VISIBLE : View.GONE);
+        btnPrev.setEnabled(!loading && hasCards && currentIndex > 0);
+        btnNext.setEnabled(!loading && hasCards && currentIndex < flashcards.size() - 1);
+        btnKnown.setEnabled(!loading && hasCards);
+        btnUnknown.setEnabled(!loading && hasCards);
+        btnGenerate.setEnabled(!loading && !hasCards);
+        btnGenerate.setText(loading ? "Loading..." : hasCards ? "Generated" : "Generate");
+    }
+
+    private Document buildDocument() {
+        Document document = new Document();
+        document.setId(documentId);
+        document.setUserId(SharedPrefManager.getInstance(this).getUserId());
+        document.setName(documentName);
+        document.setFilePath(documentUrl);
+        document.setFileType(documentType);
+        document.setTopicId(topicId);
+        return document;
     }
 }

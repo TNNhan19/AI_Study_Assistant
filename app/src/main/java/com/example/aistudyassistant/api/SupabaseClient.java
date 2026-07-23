@@ -38,6 +38,7 @@ public class SupabaseClient {
     private static SupabaseClient instance;
 
     private final OkHttpClient httpClient;
+    private final OkHttpClient edgeFunctionClient;
     private final String baseUrl;
     private final String anonKey;
     private final Object refreshLock = new Object();
@@ -58,6 +59,12 @@ public class SupabaseClient {
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+        this.edgeFunctionClient = httpClient.newBuilder()
+                // Tác vụ AI có thể cần nhiều thời gian hơn request CRUD.
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
                 .build();
     }
 
@@ -280,6 +287,44 @@ public class SupabaseClient {
         return baseUrl + "/storage/v1/object/public/" + bucket + "/" + path;
     }
 
+    // ======================== Edge Functions ========================
+
+    /**
+     * Gọi Edge Function bằng session hiện tại và retry một lần sau khi refresh JWT.
+     */
+    public String invokeEdgeFunction(String functionName, String jsonBody) {
+        if (functionName == null || functionName.trim().isEmpty()
+                || jsonBody == null || jsonBody.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            RequestBody body = RequestBody.create(
+                    jsonBody,
+                    MediaType.parse("application/json; charset=utf-8")
+            );
+            String requestToken = getBearerToken();
+            Request request = new Request.Builder()
+                    .url(baseUrl + "/functions/v1/" + functionName.trim())
+                    .post(body)
+                    .addHeader("apikey", anonKey)
+                    .addHeader("Authorization", "Bearer " + requestToken)
+                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                    .build();
+
+            HttpResult result = executeWithRefresh(
+                    edgeFunctionClient, request, true, requestToken);
+            if (!result.successful) {
+                Log.e(TAG, "Edge Function failed: " + result.code + " " + result.body);
+                return null;
+            }
+            return result.body;
+        } catch (IOException e) {
+            Log.e(TAG, "Edge Function error: " + e.getMessage());
+            return null;
+        }
+    }
+
     // ======================== HTTP Helpers ========================
 
     private String getRequest(String url) {
@@ -373,7 +418,13 @@ public class SupabaseClient {
 
     private HttpResult executeWithRefresh(Request request, boolean allowRefresh,
                                           String requestToken) throws IOException {
-        HttpResult result = executeOnce(request);
+        return executeWithRefresh(httpClient, request, allowRefresh, requestToken);
+    }
+
+    private HttpResult executeWithRefresh(OkHttpClient client, Request request,
+                                          boolean allowRefresh,
+                                          String requestToken) throws IOException {
+        HttpResult result = executeOnce(client, request);
         if (!allowRefresh || !isSessionExpired(result)) {
             return result;
         }
@@ -386,7 +437,7 @@ public class SupabaseClient {
         Request retryRequest = request.newBuilder()
                 .header("Authorization", "Bearer " + getBearerToken())
                 .build();
-        HttpResult retryResult = executeOnce(retryRequest);
+        HttpResult retryResult = executeOnce(client, retryRequest);
         if (isSessionExpired(retryResult)) {
             notifySessionExpired();
         }
@@ -394,7 +445,11 @@ public class SupabaseClient {
     }
 
     private HttpResult executeOnce(Request request) throws IOException {
-        try (Response response = httpClient.newCall(request).execute()) {
+        return executeOnce(httpClient, request);
+    }
+
+    private HttpResult executeOnce(OkHttpClient client, Request request) throws IOException {
+        try (Response response = client.newCall(request).execute()) {
             String body = response.body() != null ? response.body().string() : "";
             return new HttpResult(response.code(), response.isSuccessful(), body);
         }

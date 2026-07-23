@@ -19,6 +19,9 @@ public class QuizResultActivity extends AppCompatActivity {
     private int correctAnswers;
     private String documentId;
     private String documentName;
+    private String documentUrl;
+    private String documentType;
+    private String topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +32,9 @@ public class QuizResultActivity extends AppCompatActivity {
         correctAnswers = getIntent().getIntExtra("correct_answers", 0);
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
+        documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
         displayResults();
@@ -70,6 +76,9 @@ public class QuizResultActivity extends AppCompatActivity {
             Intent intent = new Intent(this, QuizActivity.class);
             intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
             intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
+            intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
+            intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+            intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
             startActivity(intent);
             finish();
         });
