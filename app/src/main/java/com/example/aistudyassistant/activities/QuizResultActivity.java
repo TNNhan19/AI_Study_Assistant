@@ -3,11 +3,16 @@ package com.example.aistudyassistant.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.QuizResult;
+import com.example.aistudyassistant.repositories.QuizRepository;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
 
 public class QuizResultActivity extends AppCompatActivity {
@@ -22,6 +27,8 @@ public class QuizResultActivity extends AppCompatActivity {
     private String documentUrl;
     private String documentType;
     private String topicId;
+    private String quizId;
+    private String projectId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,11 +37,13 @@ public class QuizResultActivity extends AppCompatActivity {
 
         totalQuestions = getIntent().getIntExtra("total_questions", 0);
         correctAnswers = getIntent().getIntExtra("correct_answers", 0);
+        quizId = getIntent().getStringExtra(Constants.EXTRA_QUIZ_ID);
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
         documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
         topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
+        projectId = getIntent().getStringExtra(Constants.EXTRA_PROJECT_ID);
 
         initViews();
         displayResults();
@@ -68,7 +77,39 @@ public class QuizResultActivity extends AppCompatActivity {
         else performance = "💪 Try Again!";
         tvPerformance.setText(performance);
 
-        // TODO: Save quiz result to Supabase
+        saveQuizResult(wrongAnswers);
+    }
+
+    private void saveQuizResult(int wrongAnswers) {
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId == null || userId.isEmpty() || totalQuestions <= 0) return;
+
+        QuizResult result = new QuizResult();
+        result.setUserId(userId);
+        result.setQuizId(quizId);
+        result.setDocumentId(documentId);
+        result.setProjectId(projectId);
+        result.setScore(correctAnswers);
+        result.setTotalQuestions(totalQuestions);
+        result.setCorrectCount(correctAnswers);
+        result.setWrongCount(wrongAnswers);
+        result.setCompletedAt(System.currentTimeMillis());
+
+        QuizRepository.getInstance().saveQuizResult(result, new ApiCallback<QuizResult>() {
+            @Override
+            public void onSuccess(QuizResult savedResult) {
+                // Result screen already shows the score; no extra UI update needed.
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> Toast.makeText(
+                        QuizResultActivity.this,
+                        "Could not save quiz result: " + errorMessage,
+                        Toast.LENGTH_LONG
+                ).show());
+            }
+        });
     }
 
     private void setupClickListeners() {
@@ -78,6 +119,7 @@ public class QuizResultActivity extends AppCompatActivity {
             intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
             intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
             intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+            intent.putExtra(Constants.EXTRA_PROJECT_ID, projectId);
             intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
             startActivity(intent);
             finish();

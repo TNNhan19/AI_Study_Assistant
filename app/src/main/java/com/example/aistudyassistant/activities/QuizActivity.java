@@ -45,6 +45,7 @@ public class QuizActivity extends AppCompatActivity {
     private String documentName;
     private String documentUrl;
     private String documentType;
+    private String projectId;
     private String topicId;
 
     @Override
@@ -56,6 +57,7 @@ public class QuizActivity extends AppCompatActivity {
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
         documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        projectId = getIntent().getStringExtra(Constants.EXTRA_PROJECT_ID);
         topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
@@ -274,10 +276,14 @@ public class QuizActivity extends AppCompatActivity {
         Intent intent = new Intent(this, QuizResultActivity.class);
         intent.putExtra("total_questions", questions.size());
         intent.putExtra("correct_answers", correctCount);
+        if (!questions.isEmpty()) {
+            intent.putExtra(Constants.EXTRA_QUIZ_ID, questions.get(0).getId());
+        }
         intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
         intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
         intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
         intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+        intent.putExtra(Constants.EXTRA_PROJECT_ID, projectId);
         intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
         startActivity(intent);
         finish();
@@ -294,6 +300,7 @@ public class QuizActivity extends AppCompatActivity {
         document.setName(documentName);
         document.setFilePath(documentUrl);
         document.setFileType(documentType);
+        document.setProjectId(projectId);
         document.setTopicId(topicId);
         return document;
     }

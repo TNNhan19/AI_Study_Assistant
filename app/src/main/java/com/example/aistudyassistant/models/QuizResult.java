@@ -2,10 +2,17 @@ package com.example.aistudyassistant.models;
 
 public class QuizResult {
     private String id;
-    private String documentId;
     private String userId;
+    private String quizId;
+    private String documentId;
+    private String projectId;
+    private String documentName;
+    private String projectName;
+    private int score;
     private int totalQuestions;
-    private int correctAnswers;
+    private int correctCount;
+    private int wrongCount;
+    private long completedAt;
     private long timeTaken;  // milliseconds
     private long createdAt;
 
@@ -14,24 +21,35 @@ public class QuizResult {
     public QuizResult(String documentId, int totalQuestions, int correctAnswers) {
         this.documentId = documentId;
         this.totalQuestions = totalQuestions;
-        this.correctAnswers = correctAnswers;
+        this.correctCount = correctAnswers;
+        this.wrongCount = Math.max(0, totalQuestions - correctAnswers);
+        this.score = correctAnswers;
+        this.completedAt = System.currentTimeMillis();
         this.createdAt = System.currentTimeMillis();
     }
 
     // Getters
     public String getId() { return id; }
-    public String getDocumentId() { return documentId; }
     public String getUserId() { return userId; }
+    public String getQuizId() { return quizId; }
+    public String getDocumentId() { return documentId; }
+    public String getProjectId() { return projectId; }
+    public String getDocumentName() { return documentName; }
+    public String getProjectName() { return projectName; }
+    public int getScore() { return score; }
     public int getTotalQuestions() { return totalQuestions; }
-    public int getCorrectAnswers() { return correctAnswers; }
-    public int getWrongAnswers() { return totalQuestions - correctAnswers; }
+    public int getCorrectCount() { return correctCount; }
+    public int getWrongCount() { return wrongCount; }
+    public int getCorrectAnswers() { return correctCount; }
+    public int getWrongAnswers() { return wrongCount; }
+    public long getCompletedAt() { return completedAt; }
     public long getTimeTaken() { return timeTaken; }
     public long getCreatedAt() { return createdAt; }
 
     /** Returns percentage score 0-100 */
     public int getScorePercent() {
         if (totalQuestions == 0) return 0;
-        return (int) ((correctAnswers * 100.0) / totalQuestions);
+        return (int) ((score * 100.0) / totalQuestions);
     }
 
     /** Returns performance label based on score */
@@ -45,10 +63,18 @@ public class QuizResult {
 
     // Setters
     public void setId(String id) { this.id = id; }
-    public void setDocumentId(String documentId) { this.documentId = documentId; }
     public void setUserId(String userId) { this.userId = userId; }
+    public void setQuizId(String quizId) { this.quizId = quizId; }
+    public void setDocumentId(String documentId) { this.documentId = documentId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
+    public void setDocumentName(String documentName) { this.documentName = documentName; }
+    public void setProjectName(String projectName) { this.projectName = projectName; }
+    public void setScore(int score) { this.score = score; }
     public void setTotalQuestions(int totalQuestions) { this.totalQuestions = totalQuestions; }
-    public void setCorrectAnswers(int correctAnswers) { this.correctAnswers = correctAnswers; }
+    public void setCorrectCount(int correctCount) { this.correctCount = correctCount; }
+    public void setWrongCount(int wrongCount) { this.wrongCount = wrongCount; }
+    public void setCorrectAnswers(int correctAnswers) { this.correctCount = correctAnswers; }
+    public void setCompletedAt(long completedAt) { this.completedAt = completedAt; }
     public void setTimeTaken(long timeTaken) { this.timeTaken = timeTaken; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 }
