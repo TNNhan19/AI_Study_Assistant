@@ -48,6 +48,27 @@
     <string name="no_flashcard_history">No flashcard history yet. Generate flashcards from a document to review them here.</string>
     <string name="flashcard_count_format">%1$d cards</string>
     <string name="review_flashcards">Review</string>
+    <string name="ai_study_plan">AI Study Plan</string>
+    <string name="project_or_subject">Project or Subject</string>
+    <string name="custom_subject">Custom subject</string>
+    <string name="subject_hint">Subject name, e.g. Data Structures</string>
+    <string name="exam_date">Exam Date</string>
+    <string name="study_time_hint">Study time per day, e.g. 2 hours</string>
+    <string name="generate_study_plan">Generate Study Plan</string>
+    <string name="subject_required">Enter a subject or choose a project</string>
+    <string name="exam_date_required">Choose an exam date</string>
+    <string name="study_time_required">Enter study time per day</string>
+    <string name="estimated_time_format">Estimated time: %1$s</string>
+    <string name="study_method_format">Method: %1$s</string>
+    <string name="plan_parse_error">Could not display this plan safely.</string>
+    <string name="saved_study_plans">Saved Study Plans</string>
+    <string name="no_saved_study_plans">No saved study plans yet.</string>
+    <string name="study_plan_detail">Study Plan</string>
+    <string name="study_plan_subject_format">Subject: %1$s</string>
+    <string name="study_plan_exam_date_format">Exam: %1$s</string>
+    <string name="study_plan_study_time_format">Study time: %1$s</string>
+    <string name="study_plan_day_count_format">%1$d study days</string>
+    <string name="study_plan_created_at_format">Created: %1$s</string>
 
     <!-- Quick Actions -->
     <string name="qa_upload">Upload Document</string>
@@ -146,8 +167,13 @@
     <string name="schedule_time">Time</string>
     <string name="save">Save</string>
     <string name="no_schedules">No study sessions scheduled.\nTap + to create one!</string>
+    <string name="no_schedules_yet">No schedules yet.</string>
     <string name="schedule_hint_title">e.g. Review Computer Network</string>
     <string name="schedule_hint_desc">e.g. Study TCP and UDP chapters</string>
+    <string name="schedule_pending">Pending</string>
+    <string name="schedule_completed">Completed</string>
+    <string name="mark_completed">Mark completed</string>
+    <string name="mark_pending">Mark pending</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">Study Reminders</string>

@@ -88,6 +88,43 @@ public class AIClient {
         return generateText(TASK_FLASHCARDS, prompt);
     }
 
+    public String generateStudyPlan(String subjectName, String examDate,
+                                    String studyTimePerDay, String generationDate,
+                                    String documentTitles) {
+        String prompt = "You are an expert academic study planner. Create a practical day-by-day study plan.\n\n"
+                + "Return ONLY valid JSON. Do not include markdown, explanations, or code fences.\n"
+                + "Use this exact JSON object format:\n"
+                + "{\n"
+                + "  \"title\": \"\",\n"
+                + "  \"subject\": \"\",\n"
+                + "  \"exam_date\": \"\",\n"
+                + "  \"study_time_per_day\": \"\",\n"
+                + "  \"days\": [\n"
+                + "    {\n"
+                + "      \"date\": \"\",\n"
+                + "      \"topic\": \"\",\n"
+                + "      \"tasks\": [],\n"
+                + "      \"estimated_time\": \"\",\n"
+                + "      \"study_method\": \"\"\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}\n\n"
+                + "Constraints:\n"
+                + "- The first study day must be GENERATION DATE.\n"
+                + "- The last study day must be the calendar day before EXAM DATE.\n"
+                + "- Do not include EXAM DATE as a study day.\n"
+                + "- Keep each day realistic for the available study time.\n"
+                + "- Include review and practice days before the exam.\n"
+                + "- Tasks must be short action items.\n\n"
+                + "SUBJECT OR PROJECT: " + safe(subjectName) + "\n"
+                + "GENERATION DATE: " + safe(generationDate) + "\n"
+                + "EXAM DATE: " + safe(examDate) + "\n"
+                + "STUDY TIME PER DAY: " + safe(studyTimePerDay) + "\n"
+                + "OPTIONAL DOCUMENT TITLES:\n" + safe(documentTitles);
+
+        return generateText(TASK_CHAT, prompt);
+    }
+
     public String chatWithDocument(String documentText, String userQuestion) {
         return chatWithLearningContext(
                 "Tài liệu", documentText, "Không có hội thoại trước đó.", userQuestion);
@@ -139,6 +176,10 @@ public class AIClient {
                 requestBody.toString()
         );
         return parseGatewayResponse(responseJson);
+    }
+
+    private String safe(String value) {
+        return value == null || value.trim().isEmpty() ? "None" : value.trim();
     }
 
     private String parseGatewayResponse(String responseJson) {

@@ -25,9 +25,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
@@ -100,6 +102,43 @@ public class AIProcessingService {
             validateCount(cardCount, 1, 50, "Số flashcard");
             DocumentAnalysis analysis = analyzeBlocking(document);
             return generateFlashcardsBlocking(document, analysis, cardCount);
+        }, callback);
+    }
+
+    public void generateStudyPlan(String subjectName, String examDate,
+                                  String studyTimePerDay, List<String> documentTitles,
+                                  ApiCallback<String> callback) {
+        submit(() -> {
+            if (subjectName == null || subjectName.trim().isEmpty()) {
+                throw new IllegalArgumentException("Please enter a subject or choose a project");
+            }
+            if (examDate == null || examDate.trim().isEmpty()) {
+                throw new IllegalArgumentException("Please choose an exam date");
+            }
+            if (studyTimePerDay == null || studyTimePerDay.trim().isEmpty()) {
+                throw new IllegalArgumentException("Please enter study time per day");
+            }
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            dateFormat.setLenient(false);
+            String generationDate = dateFormat.format(new Date());
+            Date today = dateFormat.parse(generationDate);
+            Date exam = dateFormat.parse(examDate.trim());
+            if (!exam.after(today)) {
+                throw new IllegalArgumentException("Exam date must be after today");
+            }
+
+            String response = aiClient.generateStudyPlan(
+                    subjectName.trim(),
+                    examDate.trim(),
+                    studyTimePerDay.trim(),
+                    generationDate,
+                    formatDocumentTitles(documentTitles)
+            );
+            JsonObject plan = parseObject(response, "study plan");
+            if (!plan.has("days") || !plan.get("days").isJsonArray()) {
+                throw new IllegalStateException("AI study plan is missing days");
+            }
+            return plan.toString();
         }, callback);
     }
 
@@ -291,6 +330,19 @@ public class AIProcessingService {
         }
         return formatted.length() == 0
                 ? "Không có hội thoại trước đó." : formatted.toString();
+    }
+
+    private String formatDocumentTitles(List<String> documentTitles) {
+        if (documentTitles == null || documentTitles.isEmpty()) return "None";
+        StringBuilder builder = new StringBuilder();
+        int count = 0;
+        for (String title : documentTitles) {
+            if (title == null || title.trim().isEmpty()) continue;
+            builder.append("- ").append(title.trim()).append('\n');
+            count++;
+            if (count >= 20) break;
+        }
+        return builder.length() == 0 ? "None" : builder.toString();
     }
 
     private Summary createSummaryBlocking(Document document,

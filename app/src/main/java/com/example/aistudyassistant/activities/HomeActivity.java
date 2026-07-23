@@ -53,7 +53,7 @@ public class HomeActivity extends AppCompatActivity {
     private RecyclerView rvRecentDocs, rvUpcomingSchedule;
 
     // Quick Action buttons
-    private View qaUpload, qaAskAi, qaQuiz, qaFlashcards, qaSchedule, qaProjects, qaNotes;
+    private View qaUpload, qaAskAi, qaQuiz, qaFlashcards, qaSchedule, qaProjects, qaNotes, qaStudyPlan;
 
     private BottomNavigationView bottomNavigation;
 
@@ -112,6 +112,7 @@ public class HomeActivity extends AppCompatActivity {
         qaSchedule = findViewById(R.id.qa_schedule);
         qaProjects = findViewById(R.id.qa_projects);
         qaNotes = findViewById(R.id.qa_notes);
+        qaStudyPlan = findViewById(R.id.qa_study_plan);
         bottomNavigation = findViewById(R.id.bottom_navigation);
     }
 
@@ -147,6 +148,9 @@ public class HomeActivity extends AppCompatActivity {
 
         qaNotes.setOnClickListener(v ->
                 startActivity(new Intent(this, NotesActivity.class)));
+
+        qaStudyPlan.setOnClickListener(v ->
+                startActivity(new Intent(this, StudyPlanActivity.class)));
 
         // Search hint click
         tvSearchHint.setOnClickListener(v ->
@@ -254,7 +258,8 @@ public class HomeActivity extends AppCompatActivity {
             public void onSuccess(List<Schedule> result) {
                 runOnUiThread(() -> {
                     upcomingSchedules.clear();
-                    upcomingSchedules.addAll(result);
+                    int count = Math.min(result.size(), 3);
+                    upcomingSchedules.addAll(result.subList(0, count));
                     scheduleAdapter.updateSchedules(upcomingSchedules);
                     updateEmptyState();
                 });
