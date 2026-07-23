@@ -111,10 +111,13 @@ public class SharedPrefManager {
     // ===================== Recent Documents =====================
 
     private static final String KEY_RECENT_DOCS = "recent_documents";
+    private static final String KEY_RECENT_DOC_OPENED_AT_PREFIX =
+            "recent_document_opened_at_";
     private static final int MAX_RECENT_DOCS = 10;
 
     public void addRecentDocument(String documentId) {
-        if (documentId == null || documentId.isEmpty()) return;
+        if (documentId == null || documentId.trim().isEmpty()) return;
+        documentId = documentId.trim();
         
         String recentStr = prefs.getString(KEY_RECENT_DOCS, "");
         java.util.List<String> recentList = new java.util.ArrayList<>();
@@ -133,18 +136,48 @@ public class SharedPrefManager {
             recentList = recentList.subList(0, MAX_RECENT_DOCS);
         }
         
-        // Join and save
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < recentList.size(); i++) {
-            sb.append(recentList.get(i));
-            if (i < recentList.size() - 1) sb.append(",");
-        }
-        prefs.edit().putString(KEY_RECENT_DOCS, sb.toString()).apply();
+        prefs.edit()
+                .putString(KEY_RECENT_DOCS, joinDocumentIds(recentList))
+                .putLong(KEY_RECENT_DOC_OPENED_AT_PREFIX + documentId,
+                        System.currentTimeMillis())
+                .apply();
     }
 
     public java.util.List<String> getRecentDocumentIds() {
         String recentStr = prefs.getString(KEY_RECENT_DOCS, "");
         if (recentStr.isEmpty()) return new java.util.ArrayList<>();
         return new java.util.ArrayList<>(java.util.Arrays.asList(recentStr.split(",")));
+    }
+
+    public long getRecentDocumentOpenedAt(String documentId) {
+        if (documentId == null || documentId.isEmpty()) return 0L;
+        return prefs.getLong(KEY_RECENT_DOC_OPENED_AT_PREFIX + documentId, 0L);
+    }
+
+    public void retainRecentDocumentIds(java.util.List<String> existingDocumentIds) {
+        java.util.Set<String> existingIds =
+                new java.util.HashSet<>(existingDocumentIds);
+        java.util.List<String> recentIds = getRecentDocumentIds();
+        java.util.List<String> retainedIds = new java.util.ArrayList<>();
+        SharedPreferences.Editor editor = prefs.edit();
+
+        for (String documentId : recentIds) {
+            if (existingIds.contains(documentId)) {
+                retainedIds.add(documentId);
+            } else {
+                editor.remove(KEY_RECENT_DOC_OPENED_AT_PREFIX + documentId);
+            }
+        }
+
+        editor.putString(KEY_RECENT_DOCS, joinDocumentIds(retainedIds)).apply();
+    }
+
+    private String joinDocumentIds(java.util.List<String> documentIds) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < documentIds.size(); i++) {
+            if (i > 0) result.append(",");
+            result.append(documentIds.get(i));
+        }
+        return result.toString();
     }
 }

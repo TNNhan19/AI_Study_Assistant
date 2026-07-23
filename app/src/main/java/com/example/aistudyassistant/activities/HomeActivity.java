@@ -12,9 +12,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.adapters.DocumentAdapter;
+import com.example.aistudyassistant.adapters.RecentDocumentAdapter;
 import com.example.aistudyassistant.adapters.ScheduleAdapter;
 import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Flashcard;
 import com.example.aistudyassistant.models.FlashcardSet;
@@ -29,16 +30,13 @@ import com.example.aistudyassistant.repositories.ScheduleRepository;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.example.aistudyassistant.api.SupabaseClient;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -52,12 +50,10 @@ public class HomeActivity extends AppCompatActivity {
     private CardView cardLatestQuizResult, cardLatestFlashcardSet;
     private RecyclerView rvRecentDocs, rvUpcomingSchedule;
 
-    // Quick Action buttons
     private View qaUpload, qaAskAi, qaQuiz, qaFlashcards, qaSchedule, qaProjects, qaNotes, qaStudyPlan;
 
     private BottomNavigationView bottomNavigation;
-
-    private DocumentAdapter documentAdapter;
+    private RecentDocumentAdapter documentAdapter;
     private ScheduleAdapter scheduleAdapter;
     private static final int MAX_HOME_DOCUMENTS = 5;
 
@@ -75,8 +71,9 @@ public class HomeActivity extends AppCompatActivity {
         setupQuickActions();
         setupRecyclerViews();
         setupBottomNavigation();
-        String homeAccessToken = SharedPrefManager.getInstance(this).getAccessToken();
-        SupabaseClient.getInstance().setAccessToken(homeAccessToken);
+        SupabaseClient.getInstance().setAccessToken(
+                SharedPrefManager.getInstance(this).getAccessToken()
+        );
         loadData();
     }
 
@@ -122,72 +119,47 @@ public class HomeActivity extends AppCompatActivity {
 
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         if (hour < 12) tvGreeting.setText(R.string.good_morning);
-
         else if (hour < 18) tvGreeting.setText(R.string.good_afternoon);
         else tvGreeting.setText(R.string.good_evening);
     }
 
     private void setupQuickActions() {
-        qaUpload.setOnClickListener(v ->
-                startActivity(new Intent(this, UploadDocumentActivity.class)));
+        qaUpload.setOnClickListener(v -> startActivity(new Intent(this, UploadDocumentActivity.class)));
+        qaAskAi.setOnClickListener(v -> startActivity(new Intent(this, AIChatActivity.class)));
+        qaQuiz.setOnClickListener(v -> openStudySets(StudySetsActivity.TYPE_QUIZ));
+        qaFlashcards.setOnClickListener(v -> openStudySets(StudySetsActivity.TYPE_FLASHCARD));
+        qaSchedule.setOnClickListener(v -> startActivity(new Intent(this, ScheduleActivity.class)));
+        qaProjects.setOnClickListener(v -> startActivity(new Intent(this, ProjectsActivity.class)));
+        qaNotes.setOnClickListener(v -> startActivity(new Intent(this, NotesActivity.class)));
+        qaStudyPlan.setOnClickListener(v -> startActivity(new Intent(this, StudyPlanActivity.class)));
+        tvSearchHint.setOnClickListener(v -> startActivity(new Intent(this, SearchActivity.class)));
 
-        qaAskAi.setOnClickListener(v ->
-                startActivity(new Intent(this, AIChatActivity.class)));
-
-        qaQuiz.setOnClickListener(v ->
-                startActivity(new Intent(this, DocumentsActivity.class)));
-
-        qaFlashcards.setOnClickListener(v ->
-                startActivity(new Intent(this, DocumentsActivity.class)));
-
-        qaSchedule.setOnClickListener(v ->
-                startActivity(new Intent(this, ScheduleActivity.class)));
-
-        qaProjects.setOnClickListener(v ->
-                startActivity(new Intent(this, ProjectsActivity.class)));
-
-        qaNotes.setOnClickListener(v ->
-                startActivity(new Intent(this, NotesActivity.class)));
-
-        qaStudyPlan.setOnClickListener(v ->
-                startActivity(new Intent(this, StudyPlanActivity.class)));
-
-        // Search hint click
-        tvSearchHint.setOnClickListener(v ->
-                startActivity(new Intent(this, SearchActivity.class)));
-
-        // See all links
-        tvSeeAllDocs.setOnClickListener(v ->
-                startActivity(new Intent(this, DocumentsActivity.class)));
-        tvSeeAllSchedule.setOnClickListener(v ->
-                startActivity(new Intent(this, ScheduleActivity.class)));
-        tvSeeAllQuizResults.setOnClickListener(v ->
-                startActivity(new Intent(this, QuizHistoryActivity.class)));
+        tvSeeAllDocs.setOnClickListener(v -> startActivity(new Intent(this, DocumentsActivity.class)));
+        tvSeeAllSchedule.setOnClickListener(v -> startActivity(new Intent(this, ScheduleActivity.class)));
+        tvSeeAllQuizResults.setOnClickListener(v -> startActivity(new Intent(this, QuizHistoryActivity.class)));
         tvSeeAllFlashcardHistory.setOnClickListener(v ->
                 startActivity(new Intent(this, FlashcardHistoryActivity.class)));
     }
 
-    private void setupRecyclerViews() {
-        documentAdapter = new DocumentAdapter(this, recentDocs);
-        documentAdapter.setListener(new DocumentAdapter.OnDocumentClickListener() {
-            @Override
-            public void onDocumentClick(Document document) {
-                Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
-                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
-                startActivity(intent);
-            }
-            @Override
-            public void onDocumentMoreClick(Document document, View anchorView) { }
+    private void openStudySets(String contentType) {
+        Intent intent = new Intent(this, StudySetsActivity.class);
+        intent.putExtra(StudySetsActivity.EXTRA_CONTENT_TYPE, contentType);
+        startActivity(intent);
+    }
 
-            @Override
-            public void onFavoriteClick(Document document) {
-                // Handle favorite toggle from home if needed
-            }
+    private void setupRecyclerViews() {
+        documentAdapter = new RecentDocumentAdapter(this);
+        documentAdapter.setListener(document -> {
+            SharedPrefManager.getInstance(this).addRecentDocument(document.getId());
+            Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
+            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
+            startActivity(intent);
         });
-        rvRecentDocs.setLayoutManager(new LinearLayoutManager(this));
+        rvRecentDocs.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvRecentDocs.setAdapter(documentAdapter);
         rvRecentDocs.setNestedScrollingEnabled(false);
 
@@ -227,16 +199,53 @@ public class HomeActivity extends AppCompatActivity {
         String userId = SharedPrefManager.getInstance(this).getUserId();
         if (userId.isEmpty()) return;
 
-        // 1. Load recent documents. Prefer recently opened IDs, then fill with newest documents.
-        List<String> recentIds = SharedPrefManager.getInstance(this).getRecentDocumentIds();
+        loadRecentDocuments(userId);
+        loadTodaySchedules(userId);
+        loadLatestQuizResult(userId);
+        loadLatestFlashcardSet(userId);
+    }
+
+    private void loadRecentDocuments(String userId) {
+        SharedPrefManager sharedPrefs = SharedPrefManager.getInstance(this);
+        List<String> recentIds = sharedPrefs.getRecentDocumentIds();
+        if (recentIds.isEmpty()) {
+            clearRecentDocuments();
+            return;
+        }
+
         DocumentRepository.getInstance().getAllDocuments(userId, new ApiCallback<List<Document>>() {
             @Override
             public void onSuccess(List<Document> result) {
-                List<Document> homeDocuments = buildHomeDocuments(result, recentIds);
+                Map<String, Document> existingDocuments = new HashMap<>();
+                for (Document document : result) {
+                    existingDocuments.put(document.getId(), document);
+                }
+
+                List<Document> sortedRecents = new ArrayList<>();
+                List<String> existingRecentIds = new ArrayList<>();
+                Map<String, Long> openedAtByDocumentId = new HashMap<>();
+                for (String id : recentIds) {
+                    Document document = existingDocuments.get(id);
+                    if (document != null) {
+                        sortedRecents.add(document);
+                        existingRecentIds.add(id);
+                        openedAtByDocumentId.put(id, sharedPrefs.getRecentDocumentOpenedAt(id));
+                    }
+                }
+
+                sortedRecents.sort((first, second) -> Long.compare(
+                        openedAtByDocumentId.getOrDefault(second.getId(), 0L),
+                        openedAtByDocumentId.getOrDefault(first.getId(), 0L)));
+                if (sortedRecents.size() > MAX_HOME_DOCUMENTS) {
+                    sortedRecents = new ArrayList<>(sortedRecents.subList(0, MAX_HOME_DOCUMENTS));
+                }
+                sharedPrefs.retainRecentDocumentIds(existingRecentIds);
+
+                List<Document> finalSortedRecents = sortedRecents;
                 runOnUiThread(() -> {
                     recentDocs.clear();
-                    recentDocs.addAll(homeDocuments);
-                    documentAdapter.updateDocuments(recentDocs);
+                    recentDocs.addAll(finalSortedRecents);
+                    documentAdapter.updateDocuments(finalSortedRecents, openedAtByDocumentId);
                     updateEmptyState();
                 });
             }
@@ -246,10 +255,6 @@ public class HomeActivity extends AppCompatActivity {
                 runOnUiThread(() -> updateEmptyState());
             }
         });
-
-        loadTodaySchedules(userId);
-        loadLatestQuizResult(userId);
-        loadLatestFlashcardSet(userId);
     }
 
     private void loadTodaySchedules(String userId) {
@@ -475,27 +480,10 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    private List<Document> buildHomeDocuments(List<Document> allDocuments, List<String> recentIds) {
-        List<Document> homeDocuments = new ArrayList<>();
-        Set<String> addedIds = new HashSet<>();
-
-        for (String id : recentIds) {
-            for (Document doc : allDocuments) {
-                if (id != null && id.equals(doc.getId()) && addedIds.add(doc.getId())) {
-                    homeDocuments.add(doc);
-                    break;
-                }
-            }
-            if (homeDocuments.size() >= MAX_HOME_DOCUMENTS) return homeDocuments;
-        }
-
-        for (Document doc : allDocuments) {
-            if (doc.getId() != null && addedIds.add(doc.getId())) {
-                homeDocuments.add(doc);
-            }
-            if (homeDocuments.size() >= MAX_HOME_DOCUMENTS) break;
-        }
-        return homeDocuments;
+    private void clearRecentDocuments() {
+        recentDocs.clear();
+        documentAdapter.updateDocuments(new ArrayList<>(), new HashMap<>());
+        updateEmptyState();
     }
 
     private void updateEmptyState() {

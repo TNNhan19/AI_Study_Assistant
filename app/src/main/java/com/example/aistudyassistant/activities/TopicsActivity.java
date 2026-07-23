@@ -20,6 +20,7 @@ import com.example.aistudyassistant.adapters.TopicAdapter;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Topic;
 import com.example.aistudyassistant.repositories.TopicRepository;
+import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -78,8 +79,8 @@ public class TopicsActivity extends AppCompatActivity {
             public void onTopicClick(Topic topic) {
                 // Mở màn hình danh sách tài liệu và lọc theo Topic này
                 Intent intent = new Intent(TopicsActivity.this, DocumentsActivity.class);
-                intent.putExtra("project_id", projectId);
-                intent.putExtra("topic_id", topic.getId());
+                intent.putExtra(Constants.EXTRA_PROJECT_ID, topic.getProjectId());
+                intent.putExtra(Constants.EXTRA_TOPIC_ID, topic.getId());
                 intent.putExtra("topic_name", topic.getName());
                 startActivity(intent);
             }

@@ -146,6 +146,8 @@ public class NoteRepository {
         note.setContent(obj.has("content") && !obj.get("content").isJsonNull() ? obj.get("content").getAsString() : "");
         note.setPinned(obj.has("is_pinned") && !obj.get("is_pinned").isJsonNull() && obj.get("is_pinned").getAsBoolean());
         note.setCreatedAt(obj.get("created_at").getAsString());
+        if (obj.has("updated_at") && !obj.get("updated_at").isJsonNull())
+            note.setUpdatedAt(obj.get("updated_at").getAsString());
         return note;
     }
 }

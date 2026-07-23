@@ -52,8 +52,26 @@ public class AIClient {
     }
 
     public String generateQuiz(String documentText, int questionCount) {
+        return generateQuiz(documentText, questionCount, "MEDIUM");
+    }
+
+    public String generateQuiz(String documentText, int questionCount, String difficulty) {
+        String levelInstruction;
+        switch (difficulty == null ? "MEDIUM" : difficulty.toUpperCase()) {
+            case "EASY":
+                levelInstruction = "EASY: focus on key facts, definitions, and direct recall.";
+                break;
+            case "HARD":
+                levelInstruction = "HARD: require analysis, inference, application, and distinguishing close distractors.";
+                break;
+            default:
+                levelInstruction = "MEDIUM: test understanding and application with plausible distractors.";
+                break;
+        }
         String prompt = "You are an expert educator. Create " + questionCount
                 + " multiple-choice quiz questions based on the following document.\n\n"
+                + "DIFFICULTY: " + levelInstruction + "\n"
+                + "Keep every question consistently at this requested level.\n\n"
                 + "Return your response as a JSON array with this exact format:\n"
                 + "[\n"
                 + "  {\n"

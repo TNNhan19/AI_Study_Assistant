@@ -3,12 +3,16 @@ package com.example.aistudyassistant.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.api.SupabaseClient;
+import com.example.aistudyassistant.models.StudyStats;
+import com.example.aistudyassistant.repositories.StudyRepository;
 import com.example.aistudyassistant.utils.SessionManager;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -26,7 +30,6 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
         initViews();
-        loadProfile();
         setupClickListeners();
         setupBottomNavigation();
     }
@@ -48,10 +51,41 @@ public class ProfileActivity extends AppCompatActivity {
         tvName.setText(prefs.getUserName());
         tvEmail.setText(prefs.getUserEmail());
 
-        // TODO: Load stats from Supabase
-        tvTotalDocs.setText("0");
-        tvTotalQuizzes.setText("0");
-        tvTotalFlashcards.setText("0");
+        String userId = prefs.getUserId();
+        if (userId.isEmpty()) {
+            displayLibraryStats(new StudyStats());
+            return;
+        }
+
+        StudyRepository.getInstance().getLibraryStats(
+                userId,
+                new ApiCallback<StudyStats>() {
+                    @Override
+                    public void onSuccess(StudyStats stats) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            displayLibraryStats(stats);
+                        });
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            Toast.makeText(ProfileActivity.this,
+                                    "Could not load statistics: " + errorMessage,
+                                    Toast.LENGTH_LONG).show();
+                        });
+                    }
+                }
+        );
+    }
+
+    private void displayLibraryStats(StudyStats stats) {
+        tvTotalDocs.setText(String.valueOf(stats.getTotalDocuments()));
+        tvTotalQuizzes.setText(String.valueOf(stats.getTotalQuizzes()));
+        tvTotalFlashcards.setText(String.valueOf(stats.getTotalFlashcards()));
+        // Schedule creation is not persisted yet, so this counter remains zero.
         tvUpcomingSessions.setText("0");
     }
 

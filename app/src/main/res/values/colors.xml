@@ -36,6 +36,8 @@
     <color name="status_completed_bg">#E8F5E9</color>
     <color name="status_failed">#E57373</color>
     <color name="status_failed_bg">#FFEBEE</color>
+    <color name="validation_error_background">#FFFFE3E3</color>
+    <color name="validation_error_text">#FF8B1E1E</color>
 
     <!-- Quiz Colors -->
     <color name="quiz_correct">#4CAF50</color>

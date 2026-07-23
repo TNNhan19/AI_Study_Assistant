@@ -29,6 +29,54 @@ public class StudyRepository {
         return instance;
     }
 
+    /**
+     * Loads the counters shown on the profile screen. A quiz means one saved
+     * quiz set, while flashcards are counted individually.
+     */
+    public void getLibraryStats(String userId, ApiCallback<StudyStats> callback) {
+        new Thread(() -> {
+            try {
+                if (userId == null || userId.trim().isEmpty()) {
+                    callback.onError("Invalid user session");
+                    return;
+                }
+
+                String userFilter = "user_id=eq." + userId + "&select=id";
+                StudyStats stats = new StudyStats();
+                stats.setTotalDocuments(countRows(supabaseClient.getFromTable(
+                        Constants.TABLE_DOCUMENTS, userFilter)));
+                stats.setTotalQuizzes(countRows(supabaseClient.getFromTable(
+                        Constants.TABLE_QUIZ_SETS, userFilter)));
+                stats.setTotalFlashcards(countRows(supabaseClient.getFromTable(
+                        Constants.TABLE_FLASHCARDS, userFilter)));
+                callback.onSuccess(stats);
+            } catch (Exception e) {
+                String message = e.getMessage();
+                callback.onError(message == null || message.trim().isEmpty()
+                        ? "Unable to load profile statistics"
+                        : message);
+            }
+        }).start();
+    }
+
+    private static int countRows(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            throw new IllegalStateException("No response from server");
+        }
+
+        JsonElement element = JsonParser.parseString(response);
+        if (element.isJsonArray()) {
+            return element.getAsJsonArray().size();
+        }
+        if (element.isJsonObject()) {
+            JsonObject error = element.getAsJsonObject();
+            if (error.has("message") && !error.get("message").isJsonNull()) {
+                throw new IllegalStateException(error.get("message").getAsString());
+            }
+        }
+        throw new IllegalStateException("Invalid server response");
+    }
+
     public void getStudyStats(String userId, ApiCallback<StudyStats> callback) {
         new Thread(() -> {
             try {

@@ -26,6 +26,9 @@
     <string name="good_afternoon">Good Afternoon</string>
     <string name="good_evening">Good Evening</string>
     <string name="recent_documents">Recent Documents</string>
+    <string name="recent_document_meta">%1$s - %2$s</string>
+    <string name="recent_document_opened">Opened %1$s</string>
+    <string name="recent_document_opened_recently">Opened recently</string>
     <string name="upcoming_schedule">Today Study</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="see_all">See All</string>
@@ -48,6 +51,24 @@
     <string name="no_flashcard_history">No flashcard history yet. Generate flashcards from a document to review them here.</string>
     <string name="flashcard_count_format">%1$d cards</string>
     <string name="review_flashcards">Review</string>
+
+    <!-- Notes and Search -->
+    <string name="note_validation_title_and_content">Please enter both a title and note content.</string>
+    <string name="note_validation_title">Please enter a note title.</string>
+    <string name="note_validation_content">Please enter note content.</string>
+    <string name="search_notes_hint">Search title, content, or document</string>
+    <string name="filter_notes">Filter notes by project and topic</string>
+    <string name="note_filter_all">All projects - All topics</string>
+    <string name="note_filter_summary">%1$s - %2$s</string>
+    <string name="all_projects">All projects</string>
+    <string name="all_topics">All topics</string>
+    <string name="select_project">Select project</string>
+    <string name="select_topic">Select topic</string>
+    <string name="next">Next</string>
+    <string name="apply">Apply</string>
+    <string name="clear_filter">Clear filter</string>
+
+    <!-- Study Plan -->
     <string name="ai_study_plan">AI Study Plan</string>
     <string name="project_or_subject">Project or Subject</string>
     <string name="custom_subject">Custom subject</string>
@@ -70,12 +91,52 @@
     <string name="study_plan_day_count_format">%1$d study days</string>
     <string name="study_plan_created_at_format">Created: %1$s</string>
 
-    <!-- Quick Actions -->
+    <!-- Quick Actions and Study Sets -->
     <string name="qa_upload">Upload Document</string>
     <string name="qa_ask_ai">Ask AI</string>
     <string name="qa_quiz">View Quiz</string>
     <string name="qa_flashcards">Flashcards</string>
     <string name="qa_schedule">Schedule</string>
+    <string name="my_quizzes">My Quizzes</string>
+    <string name="my_flashcards">My Flashcards</string>
+    <string name="quiz_library_subtitle">Choose a quiz to take it again</string>
+    <string name="flashcard_library_subtitle">Choose a flashcard set to review</string>
+    <string name="no_saved_quizzes">No saved quizzes yet</string>
+    <string name="no_saved_quizzes_message">Generate a quiz from a document, then it will appear here.</string>
+    <string name="no_saved_flashcards">No saved flashcards yet</string>
+    <string name="no_saved_flashcards_message">Generate flashcards from a document, then they will appear here.</string>
+    <string name="choose_document">Choose Document</string>
+    <string name="retake_quiz_action">Retake</string>
+    <string name="review_flashcards_action">Review</string>
+    <string name="study_set_context">Project: %1$s - Topic: %2$s</string>
+    <string name="no_project">No project</string>
+    <string name="no_topic">No topic</string>
+    <string name="session_required">Please sign in again to view saved study content.</string>
+    <string name="search_quizzes">Search quiz, document, project, or topic</string>
+    <string name="quiz_source_document">Document: %1$s</string>
+    <string name="pinned">PINNED</string>
+    <string name="pin_quiz">Pin quiz</string>
+    <string name="unpin_quiz">Unpin quiz</string>
+    <string name="rename_quiz">Rename quiz</string>
+    <string name="delete_quiz">Delete quiz</string>
+    <string name="rename_quiz_hint">Quiz name</string>
+    <string name="rename_quiz_success">Quiz renamed</string>
+    <string name="pin_quiz_success">Quiz pinned</string>
+    <string name="unpin_quiz_success">Quiz unpinned</string>
+    <string name="delete_quiz_success">Quiz deleted</string>
+    <string name="delete_quiz_confirm">Delete \"%1$s\" and all of its questions? This action cannot be undone.</string>
+    <string name="quiz_name_required">Please enter a quiz name.</string>
+    <string name="no_matching_quizzes">No quizzes match your search.</string>
+    <string name="more_options">More options</string>
+
+    <plurals name="quiz_question_count">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
+    <plurals name="flashcard_count">
+        <item quantity="one">%d flashcard</item>
+        <item quantity="other">%d flashcards</item>
+    </plurals>
 
     <!-- Documents -->
     <string name="documents">Documents</string>

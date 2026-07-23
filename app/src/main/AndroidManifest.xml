@@ -72,6 +72,7 @@
         <activity android:name=".activities.FlashcardHistoryActivity" />
         <activity android:name=".activities.StudyPlanActivity" />
         <activity android:name=".activities.StudyPlanDetailActivity" />
+        <activity android:name=".activities.StudySetsActivity" />
         <activity android:name=".activities.AIChatActivity" />
         <activity
             android:name=".activities.DocumentChatActivity"

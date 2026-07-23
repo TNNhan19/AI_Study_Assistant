@@ -1,6 +1,7 @@
 package com.example.aistudyassistant.adapters;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,6 +50,11 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         holder.tvTitle.setText(note.getTitle());
         holder.tvContent.setText(note.getContent());
         holder.ivPinned.setVisibility(note.isPinned() ? View.VISIBLE : View.GONE);
+
+        String contextLabel = buildContextLabel(note);
+        holder.tvContext.setText(contextLabel);
+        holder.tvContext.setVisibility(
+                contextLabel.isEmpty() ? View.GONE : View.VISIBLE);
         
         // Date formatting (simplified)
         if (note.getCreatedAt() != null) {
@@ -70,8 +76,22 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return notes.size();
     }
 
+    private String buildContextLabel(Note note) {
+        java.util.List<String> contextParts = new java.util.ArrayList<>();
+        if (!TextUtils.isEmpty(note.getProjectName())) {
+            contextParts.add(note.getProjectName());
+        }
+        if (!TextUtils.isEmpty(note.getTopicName())) {
+            contextParts.add(note.getTopicName());
+        }
+        if (!TextUtils.isEmpty(note.getDocumentName())) {
+            contextParts.add(note.getDocumentName());
+        }
+        return TextUtils.join(" › ", contextParts);
+    }
+
     static class NoteViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvContent, tvDate;
+        TextView tvTitle, tvContent, tvContext, tvDate;
         ImageButton btnMore;
         ImageView ivPinned;
 
@@ -79,6 +99,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_note_title);
             tvContent = itemView.findViewById(R.id.tv_note_content);
+            tvContext = itemView.findViewById(R.id.tv_note_context);
             tvDate = itemView.findViewById(R.id.tv_note_date);
             btnMore = itemView.findViewById(R.id.btn_more);
             ivPinned = itemView.findViewById(R.id.iv_pinned);

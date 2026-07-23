@@ -11,8 +11,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.api.SupabaseClient;
+import com.example.aistudyassistant.models.User;
+import com.example.aistudyassistant.repositories.UserRepository;
 import com.example.aistudyassistant.utils.SessionManager;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -135,12 +139,35 @@ public class LoginActivity extends AppCompatActivity {
             // Lưu đồng thời access token và refresh token sau khi đăng nhập.
             SessionManager.getInstance(this).saveSession(
                     userId, userEmail, fullName, accessToken, refreshToken);
-
-            navigateToHome();
+            loadSavedProfileThenNavigate(userId);
 
         } catch (Exception e) {
             Toast.makeText(this, "Login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void loadSavedProfileThenNavigate(String userId) {
+        UserRepository.getInstance().getProfile(userId, new ApiCallback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    SharedPrefManager.getInstance(LoginActivity.this)
+                            .updateUserName(user.getFullName());
+                    navigateToHome();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                // The auth metadata name remains a safe fallback if the profile
+                // table is temporarily unavailable.
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    navigateToHome();
+                });
+            }
+        });
     }
 
     private String getErrorMessage(JsonObject json) {

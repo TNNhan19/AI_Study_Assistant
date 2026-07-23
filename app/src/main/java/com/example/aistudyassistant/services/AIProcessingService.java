@@ -89,10 +89,15 @@ public class AIProcessingService {
 
     public void generateQuiz(Document document, int questionCount,
                              ApiCallback<List<QuizQuestion>> callback) {
+        generateQuiz(document, questionCount, "MEDIUM", callback);
+    }
+
+    public void generateQuiz(Document document, int questionCount, String difficulty,
+                             ApiCallback<List<QuizQuestion>> callback) {
         submit(() -> {
             validateCount(questionCount, 1, 30, "Số câu hỏi");
             DocumentAnalysis analysis = analyzeBlocking(document);
-            return generateQuizBlocking(document, analysis, questionCount);
+            return generateQuizBlocking(document, analysis, questionCount, difficulty);
         }, callback);
     }
 
@@ -197,7 +202,7 @@ public class AIProcessingService {
             DocumentAnalysis analysis = analyzeBlocking(document);
             Summary summary = createSummaryBlocking(document, analysis);
             List<QuizQuestion> quiz = generateQuizBlocking(
-                    document, analysis, DEFAULT_QUIZ_COUNT);
+                    document, analysis, DEFAULT_QUIZ_COUNT, "MEDIUM");
             List<Flashcard> flashcards = generateFlashcardsBlocking(
                     document, analysis, DEFAULT_FLASHCARD_COUNT);
             return new AIProcessingResult(analysis, summary, quiz, flashcards);
@@ -362,8 +367,13 @@ public class AIProcessingService {
 
     private List<QuizQuestion> generateQuizBlocking(Document document,
                                                      DocumentAnalysis analysis,
-                                                     int questionCount) {
-        String rawResponse = aiClient.generateQuiz(analysis.getText(), questionCount);
+                                                     int questionCount,
+                                                     String difficulty) {
+        String normalizedDifficulty = difficulty == null
+                ? "MEDIUM"
+                : difficulty.trim().toUpperCase(Locale.US);
+        String rawResponse = aiClient.generateQuiz(
+                analysis.getText(), questionCount, normalizedDifficulty);
         JsonArray array = parseArray(rawResponse, "câu hỏi");
         List<QuizQuestion> questions = new ArrayList<>();
 
@@ -385,6 +395,7 @@ public class AIProcessingService {
                     optionalString(json, "explanation")
             );
             question.setDocumentId(document.getId());
+            question.setDifficulty(normalizedDifficulty);
             question.setOrderIndex(questions.size());
             questions.add(question);
         }
