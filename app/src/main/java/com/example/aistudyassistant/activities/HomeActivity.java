@@ -101,11 +101,10 @@ public class HomeActivity extends AppCompatActivity {
         qaAskAi.setOnClickListener(v ->
                 startActivity(new Intent(this, AIChatActivity.class)));
 
-        qaQuiz.setOnClickListener(v ->
-                startActivity(new Intent(this, DocumentsActivity.class)));
+        qaQuiz.setOnClickListener(v -> openStudySets(StudySetsActivity.TYPE_QUIZ));
 
         qaFlashcards.setOnClickListener(v ->
-                startActivity(new Intent(this, DocumentsActivity.class)));
+                openStudySets(StudySetsActivity.TYPE_FLASHCARD));
 
         qaSchedule.setOnClickListener(v ->
                 startActivity(new Intent(this, ScheduleActivity.class)));
@@ -125,6 +124,12 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, DocumentsActivity.class)));
         tvSeeAllSchedule.setOnClickListener(v ->
                 startActivity(new Intent(this, ScheduleActivity.class)));
+    }
+
+    private void openStudySets(String contentType) {
+        Intent intent = new Intent(this, StudySetsActivity.class);
+        intent.putExtra(StudySetsActivity.EXTRA_CONTENT_TYPE, contentType);
+        startActivity(intent);
     }
 
     private void setupRecyclerViews() {

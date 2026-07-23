@@ -5,6 +5,7 @@ import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.Flashcard;
 import com.example.aistudyassistant.models.QuizQuestion;
+import com.example.aistudyassistant.models.StudySet;
 import com.example.aistudyassistant.models.Summary;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.gson.JsonArray;
@@ -13,7 +14,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class AIContentRepository {
 
@@ -29,6 +33,226 @@ public class AIContentRepository {
             instance = new AIContentRepository();
         }
         return instance;
+    }
+
+    /**
+     * Returns one study set per source document. Rows are ordered newest first,
+     * so users can immediately reopen generated quizzes or flashcards.
+     */
+    public void getStudySets(String userId, boolean quizMode,
+                             ApiCallback<List<StudySet>> callback) {
+        new Thread(() -> {
+            try {
+                if (isBlank(userId)) {
+                    callback.onError("Thiếu thông tin người dùng");
+                    return;
+                }
+                if (quizMode) {
+                    callback.onSuccess(loadQuizStudySets(userId));
+                    return;
+                }
+
+                String table = Constants.TABLE_FLASHCARDS;
+                String query = "user_id=eq." + userId
+                        + "&select=document_id,created_at,"
+                        + "documents(name,file_path,file_type,topic_id,project_id)"
+                        + "&order=created_at.desc";
+                String response = supabaseClient.getFromTable(table, query);
+                if (response == null) {
+                    callback.onError(quizMode
+                            ? "Không thể tải danh sách quiz"
+                            : "Không thể tải danh sách flashcard");
+                    return;
+                }
+
+                JsonArray rows = parseRows(response, quizMode
+                        ? "Không thể tải danh sách quiz"
+                        : "Không thể tải danh sách flashcard");
+                Map<String, String> projectNames = loadNames(
+                        Constants.TABLE_PROJECTS, userId);
+                Map<String, String> topicNames = loadNames(
+                        Constants.TABLE_TOPICS, userId);
+                Map<String, StudySet> grouped = new LinkedHashMap<>();
+                for (JsonElement row : rows) {
+                    JsonObject json = row.getAsJsonObject();
+                    String documentId = readString(json, "document_id");
+                    if (isBlank(documentId)) continue;
+
+                    StudySet existing = grouped.get(documentId);
+                    if (existing != null) {
+                        existing.incrementItemCount();
+                        continue;
+                    }
+
+                    JsonObject document = readRelatedDocument(json);
+                    if (document == null) continue;
+                    String projectName = projectNames.getOrDefault(
+                            readString(document, "project_id"), "");
+                    String topicName = topicNames.getOrDefault(
+                            readString(document, "topic_id"), "");
+                    StudySet studySet = new StudySet(
+                            documentId,
+                            readString(document, "name"),
+                            readString(document, "file_path"),
+                            readString(document, "file_type"),
+                            readString(document, "topic_id"),
+                            projectName,
+                            topicName,
+                            readString(json, "created_at")
+                    );
+                    grouped.put(documentId, studySet);
+                }
+                List<StudySet> result = new ArrayList<>(grouped.values());
+                callback.onSuccess(result);
+            } catch (Exception error) {
+                callback.onError(readError(error, quizMode
+                        ? "Không thể đọc danh sách quiz"
+                        : "Không thể đọc danh sách flashcard"));
+            }
+        }).start();
+    }
+
+    private List<StudySet> loadQuizStudySets(String userId) {
+        Map<String, Integer> questionCounts = new LinkedHashMap<>();
+        String questionResponse = supabaseClient.getFromTable(
+                Constants.TABLE_QUIZZES,
+                "user_id=eq." + userId + "&select=quiz_set_id");
+        for (JsonElement row : parseRows(
+                questionResponse, "Không thể đếm câu hỏi quiz")) {
+            String quizSetId = readString(row.getAsJsonObject(), "quiz_set_id");
+            if (!isBlank(quizSetId)) {
+                questionCounts.put(
+                        quizSetId, questionCounts.getOrDefault(quizSetId, 0) + 1);
+            }
+        }
+
+        Map<String, String> projectNames = loadNames(Constants.TABLE_PROJECTS, userId);
+        Map<String, String> topicNames = loadNames(Constants.TABLE_TOPICS, userId);
+        String response = supabaseClient.getFromTable(
+                Constants.TABLE_QUIZ_SETS,
+                "user_id=eq." + userId
+                        + "&select=id,document_id,title,is_pinned,difficulty,created_at,"
+                        + "documents(name,file_path,file_type,topic_id,project_id)"
+                        + "&order=is_pinned.desc,updated_at.desc");
+        JsonArray rows = parseRows(response, "Không thể tải danh sách quiz");
+        List<StudySet> result = new ArrayList<>();
+        for (JsonElement row : rows) {
+            JsonObject json = row.getAsJsonObject();
+            JsonObject document = readRelatedDocument(json);
+            String documentId = readString(json, "document_id");
+            if (isBlank(documentId) || document == null) continue;
+
+            StudySet studySet = new StudySet(
+                    documentId,
+                    readString(document, "name"),
+                    readString(document, "file_path"),
+                    readString(document, "file_type"),
+                    readString(document, "topic_id"),
+                    projectNames.getOrDefault(readString(document, "project_id"), ""),
+                    topicNames.getOrDefault(readString(document, "topic_id"), ""),
+                    readString(json, "created_at")
+            );
+            String quizSetId = readString(json, "id");
+            studySet.applyQuizMetadata(
+                    quizSetId,
+                    readString(json, "title"),
+                    json.has("is_pinned")
+                            && !json.get("is_pinned").isJsonNull()
+                            && json.get("is_pinned").getAsBoolean(),
+                    readString(json, "difficulty")
+            );
+            studySet.setItemCount(questionCounts.getOrDefault(quizSetId, 0));
+            result.add(studySet);
+        }
+        return result;
+    }
+
+    public void updateQuizSet(String quizSetId, String title, Boolean pinned,
+                              ApiCallback<Boolean> callback) {
+        new Thread(() -> {
+            try {
+                if (isBlank(quizSetId)) {
+                    callback.onError("Không tìm thấy bộ quiz");
+                    return;
+                }
+                JsonObject body = new JsonObject();
+                if (title != null) {
+                    String normalizedTitle = title.trim();
+                    if (normalizedTitle.isEmpty()) {
+                        callback.onError("Tên quiz không được để trống");
+                        return;
+                    }
+                    body.addProperty("title", normalizedTitle);
+                }
+                if (pinned != null) body.addProperty("is_pinned", pinned);
+
+                String response = supabaseClient.updateInTable(
+                        Constants.TABLE_QUIZ_SETS, quizSetId, body.toString());
+                JsonArray rows = parseRows(response, "Không thể cập nhật bộ quiz");
+                if (rows.size() == 0) {
+                    callback.onError("Không tìm thấy bộ quiz để cập nhật");
+                    return;
+                }
+                callback.onSuccess(true);
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể cập nhật bộ quiz"));
+            }
+        }).start();
+    }
+
+    public void deleteQuizSet(String quizSetId, ApiCallback<Boolean> callback) {
+        new Thread(() -> {
+            try {
+                if (isBlank(quizSetId)) {
+                    callback.onError("Không tìm thấy bộ quiz");
+                    return;
+                }
+                JsonObject body = new JsonObject();
+                body.addProperty("p_quiz_set_id", quizSetId);
+                String response = supabaseClient.callRpc(
+                        "delete_quiz_set", body.toString());
+                if (response == null
+                        || !JsonParser.parseString(response).getAsBoolean()) {
+                    callback.onError("Không thể xóa bộ quiz");
+                    return;
+                }
+                callback.onSuccess(true);
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể xóa bộ quiz"));
+            }
+        }).start();
+    }
+
+    private Map<String, String> loadNames(String table, String userId) {
+        Map<String, String> names = new LinkedHashMap<>();
+        String response = supabaseClient.getFromTable(
+                table,
+                "user_id=eq." + userId + "&select=id,name");
+        if (response == null) return names;
+
+        JsonArray rows = parseRows(response, "Không thể tải dữ liệu phân loại");
+        for (JsonElement row : rows) {
+            JsonObject json = row.getAsJsonObject();
+            String id = readString(json, "id");
+            if (!isBlank(id)) {
+                names.put(id, readString(json, "name"));
+            }
+        }
+        return names;
+    }
+
+    private JsonObject readRelatedDocument(JsonObject row) {
+        if (!row.has("documents") || row.get("documents").isJsonNull()) {
+            return null;
+        }
+        JsonElement related = row.get("documents");
+        if (related.isJsonObject()) {
+            return related.getAsJsonObject();
+        }
+        if (related.isJsonArray() && related.getAsJsonArray().size() > 0) {
+            return related.getAsJsonArray().get(0).getAsJsonObject();
+        }
+        return null;
     }
 
     /**
@@ -129,17 +353,47 @@ public class AIContentRepository {
         }).start();
     }
 
+    public void getQuizQuestionsBySet(String userId, String quizSetId,
+                                      ApiCallback<List<QuizQuestion>> callback) {
+        new Thread(() -> {
+            try {
+                if (isBlank(userId) || isBlank(quizSetId)) {
+                    callback.onError("Thiếu thông tin user hoặc bộ quiz");
+                    return;
+                }
+                String query = "user_id=eq." + userId
+                        + "&quiz_set_id=eq." + quizSetId
+                        + "&order=created_at.asc,id.asc";
+                JsonArray rows = parseRows(
+                        supabaseClient.getFromTable(Constants.TABLE_QUIZZES, query),
+                        "Không thể tải câu hỏi");
+                callback.onSuccess(parseQuizQuestions(rows));
+            } catch (Exception error) {
+                callback.onError(readError(error, "Không thể đọc câu hỏi"));
+            }
+        }).start();
+    }
+
     /**
      * Bulk insert cả bộ câu hỏi sau khi AI sinh thành công.
      */
     public void saveQuizQuestions(Document document, List<QuizQuestion> questions,
                                   ApiCallback<List<QuizQuestion>> callback) {
+        saveQuizQuestions(document, questions, "MEDIUM", callback);
+    }
+
+    public void saveQuizQuestions(Document document, List<QuizQuestion> questions,
+                                  String difficulty,
+                                  ApiCallback<List<QuizQuestion>> callback) {
         new Thread(() -> {
             try {
                 validateQuizQuestions(document, questions);
+                String normalizedDifficulty = normalizeQuizDifficulty(difficulty);
+                String quizSetId = createQuizSet(document, normalizedDifficulty);
                 JsonArray requestRows = new JsonArray();
                 for (QuizQuestion question : questions) {
-                    requestRows.add(buildQuizJson(document, question));
+                    requestRows.add(buildQuizJson(
+                            document, question, quizSetId, normalizedDifficulty));
                 }
 
                 String response = supabaseClient.insertIntoTable(
@@ -159,6 +413,27 @@ public class AIContentRepository {
                 callback.onError(readError(error, "Không thể lưu bộ câu hỏi"));
             }
         }).start();
+    }
+
+    private String createQuizSet(Document document, String difficulty) {
+        JsonObject body = new JsonObject();
+        body.addProperty("user_id", document.getUserId());
+        body.addProperty("document_id", document.getId());
+        String levelName = "EASY".equals(difficulty)
+                ? "Easy"
+                : ("HARD".equals(difficulty) ? "Hard" : "Medium");
+        body.addProperty("title", (isBlank(document.getName())
+                ? "Quiz"
+                : document.getName().trim()) + " - " + levelName);
+        body.addProperty("difficulty", difficulty);
+        JsonArray inserted = parseRows(
+                supabaseClient.insertIntoTable(
+                        Constants.TABLE_QUIZ_SETS, body.toString()),
+                "Không thể tạo bộ quiz");
+        if (inserted.size() == 0) {
+            throw new IllegalStateException("Không thể tạo bộ quiz");
+        }
+        return readString(inserted.get(0).getAsJsonObject(), "id");
     }
 
     /**
@@ -255,10 +530,12 @@ public class AIContentRepository {
         return json;
     }
 
-    private JsonObject buildQuizJson(Document document, QuizQuestion question) {
+    private JsonObject buildQuizJson(Document document, QuizQuestion question,
+                                     String quizSetId, String difficulty) {
         JsonObject json = new JsonObject();
         json.addProperty("user_id", document.getUserId());
         json.addProperty("document_id", document.getId());
+        json.addProperty("quiz_set_id", quizSetId);
         if (!isBlank(document.getTopicId())) {
             json.addProperty("topic_id", document.getTopicId());
         }
@@ -270,7 +547,7 @@ public class AIContentRepository {
         json.addProperty("correct_answer", question.getCorrectAnswer());
         // Bulk insert yêu cầu mọi row có cùng tập key.
         json.addProperty("explanation", question.getExplanation());
-        json.addProperty("difficulty", "MEDIUM");
+        json.addProperty("difficulty", difficulty);
         return json;
     }
 
@@ -316,6 +593,8 @@ public class AIContentRepository {
             );
             question.setId(readString(json, "id"));
             question.setDocumentId(readString(json, "document_id"));
+            question.setQuizSetId(readString(json, "quiz_set_id"));
+            question.setDifficulty(readString(json, "difficulty"));
             question.setOrderIndex(questions.size());
             questions.add(question);
         }
@@ -425,4 +704,17 @@ public class AIContentRepository {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
+
+    private String normalizeQuizDifficulty(String difficulty) {
+        String normalized = isBlank(difficulty)
+                ? "MEDIUM"
+                : difficulty.trim().toUpperCase(Locale.US);
+        if (!"EASY".equals(normalized)
+                && !"MEDIUM".equals(normalized)
+                && !"HARD".equals(normalized)) {
+            throw new IllegalArgumentException("Độ khó quiz không hợp lệ");
+        }
+        return normalized;
+    }
+
 }

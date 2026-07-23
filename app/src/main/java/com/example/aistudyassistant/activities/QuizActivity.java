@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 
 import com.example.aistudyassistant.R;
@@ -46,6 +47,8 @@ public class QuizActivity extends AppCompatActivity {
     private String documentUrl;
     private String documentType;
     private String topicId;
+    private String quizSetId;
+    private String difficulty = "MEDIUM";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,10 +60,20 @@ public class QuizActivity extends AppCompatActivity {
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
         documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
         topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
+        quizSetId = getIntent().getStringExtra(Constants.EXTRA_QUIZ_SET_ID);
+        String requestedDifficulty = getIntent().getStringExtra(
+                Constants.EXTRA_QUIZ_DIFFICULTY);
+        if (requestedDifficulty != null && !requestedDifficulty.trim().isEmpty()) {
+            difficulty = requestedDifficulty;
+        }
 
         initViews();
         setupClickListeners();
-        loadQuestions();
+        if (quizSetId == null || quizSetId.trim().isEmpty()) {
+            showDifficultyDialog();
+        } else {
+            loadQuestions();
+        }
     }
 
     private void initViews() {
@@ -109,18 +122,20 @@ public class QuizActivity extends AppCompatActivity {
     private void loadQuestions() {
         setLoading(true);
         String userId = SharedPrefManager.getInstance(this).getUserId();
-        AIContentRepository.getInstance().getQuizQuestionsByDocument(
-                userId, documentId,
+        AIContentRepository.getInstance().getQuizQuestionsBySet(
+                userId, quizSetId,
                 new ApiCallback<List<QuizQuestion>>() {
             @Override
             public void onSuccess(List<QuizQuestion> result) {
                 runOnUiThread(() -> {
+                    setLoading(false);
                     if (result.isEmpty()) {
-                        generateQuiz();
-                    } else {
-                        setLoading(false);
-                        showQuestions(result);
+                        Toast.makeText(QuizActivity.this,
+                                "Bộ quiz này chưa có câu hỏi", Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
                     }
+                    showQuestions(result);
                 });
             }
 
@@ -135,10 +150,28 @@ public class QuizActivity extends AppCompatActivity {
         });
     }
 
+    private void showDifficultyDialog() {
+        String[] labels = {"Easy", "Medium", "Hard"};
+        String[] values = {"EASY", "MEDIUM", "HARD"};
+        int defaultIndex = 1;
+        new AlertDialog.Builder(this)
+                .setTitle("Select difficulty")
+                .setSingleChoiceItems(labels, defaultIndex, null)
+                .setPositiveButton("Generate quiz", (dialog, which) -> {
+                    int selected = ((AlertDialog) dialog)
+                            .getListView().getCheckedItemPosition();
+                    difficulty = values[selected < 0 ? defaultIndex : selected];
+                    generateQuiz();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> finish())
+                .setOnCancelListener(dialog -> finish())
+                .show();
+    }
+
     private void generateQuiz() {
         setLoading(true);
         AIProcessingService.getInstance(this).generateQuiz(
-                buildDocument(), 10,
+                buildDocument(), 10, difficulty,
                 new ApiCallback<List<QuizQuestion>>() {
             @Override
             public void onSuccess(List<QuizQuestion> result) {
@@ -162,11 +195,14 @@ public class QuizActivity extends AppCompatActivity {
 
     private void saveQuestions(List<QuizQuestion> generatedQuestions) {
         AIContentRepository.getInstance().saveQuizQuestions(
-                buildDocument(), generatedQuestions,
+                buildDocument(), generatedQuestions, difficulty,
                 new ApiCallback<List<QuizQuestion>>() {
             @Override
             public void onSuccess(List<QuizQuestion> savedQuestions) {
                 runOnUiThread(() -> {
+                    if (!savedQuestions.isEmpty()) {
+                        quizSetId = savedQuestions.get(0).getQuizSetId();
+                    }
                     setLoading(false);
                     showQuestions(savedQuestions);
                     Toast.makeText(QuizActivity.this,
@@ -279,6 +315,8 @@ public class QuizActivity extends AppCompatActivity {
         intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
         intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
         intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
+        intent.putExtra(Constants.EXTRA_QUIZ_SET_ID, quizSetId);
+        intent.putExtra(Constants.EXTRA_QUIZ_DIFFICULTY, difficulty);
         startActivity(intent);
         finish();
     }

@@ -3,6 +3,8 @@ package com.example.aistudyassistant.models;
 public class QuizQuestion {
     private String id;
     private String documentId;
+    private String quizSetId;
+    private String difficulty;
     private String question;
     private String optionA;
     private String optionB;
@@ -29,6 +31,8 @@ public class QuizQuestion {
     // Getters
     public String getId() { return id; }
     public String getDocumentId() { return documentId; }
+    public String getQuizSetId() { return quizSetId; }
+    public String getDifficulty() { return difficulty; }
     public String getQuestion() { return question; }
     public String getOptionA() { return optionA; }
     public String getOptionB() { return optionB; }
@@ -41,6 +45,8 @@ public class QuizQuestion {
     // Setters
     public void setId(String id) { this.id = id; }
     public void setDocumentId(String documentId) { this.documentId = documentId; }
+    public void setQuizSetId(String quizSetId) { this.quizSetId = quizSetId; }
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
     public void setQuestion(String question) { this.question = question; }
     public void setOptionA(String optionA) { this.optionA = optionA; }
     public void setOptionB(String optionB) { this.optionB = optionB; }

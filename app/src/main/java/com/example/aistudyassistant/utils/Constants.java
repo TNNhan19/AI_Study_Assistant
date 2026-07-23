@@ -15,6 +15,7 @@ public class Constants {
     public static final String TABLE_SUMMARIES = "summaries";
     public static final String TABLE_FLASHCARDS = "flashcards";
     public static final String TABLE_QUIZZES = "quizzes";
+    public static final String TABLE_QUIZ_SETS = "quiz_sets";
     public static final String TABLE_QUIZ_QUESTIONS = "quiz_questions";
     public static final String TABLE_QUIZ_RESULTS = "quiz_results";
     public static final String TABLE_NOTES = "notes";
@@ -49,6 +50,8 @@ public class Constants {
     public static final String EXTRA_TOPIC_ID = "topic_id";
     public static final String EXTRA_SCHEDULE_ID = "schedule_id";
     public static final String EXTRA_QUIZ_ID = "quiz_id";
+    public static final String EXTRA_QUIZ_SET_ID = "quiz_set_id";
+    public static final String EXTRA_QUIZ_DIFFICULTY = "quiz_difficulty";
 
     // ===================== Document Status =====================
     public static final String STATUS_UPLOADED = "UPLOADED";
