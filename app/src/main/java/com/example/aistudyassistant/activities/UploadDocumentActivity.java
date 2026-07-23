@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.utils.Constants;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class UploadDocumentActivity extends AppCompatActivity {
 
@@ -42,6 +44,7 @@ public class UploadDocumentActivity extends AppCompatActivity {
 
     private Uri selectedFileUri;
     private String selectedFileName;
+    private String selectedFileType;
     private long selectedFileSize;
     
     private List<Project> projectList = new ArrayList<>();
@@ -60,6 +63,9 @@ public class UploadDocumentActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_upload_document);
+        SupabaseClient.getInstance().setAccessToken(
+                SharedPrefManager.getInstance(this).getAccessToken()
+        );
         initViews();
         setupClickListeners();
     }
@@ -88,17 +94,16 @@ public class UploadDocumentActivity extends AppCompatActivity {
 
         cardDropZone.setOnClickListener(v ->
                 filePickerLauncher.launch(new String[]{"application/pdf", "text/plain",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/msword",
+                        "application/octet-stream",
+                        "application/x-zip-compressed",
+                        "application/zip"}));
 
         btnUpload.setOnClickListener(v -> uploadDocument());
 
         btnRemoveFile.setOnClickListener(v -> {
-            selectedFileUri = null;
-            selectedFileName = null;
-            selectedFileSize = 0;
-            cardFileInfo.setVisibility(View.GONE);
-            cardDropZone.setVisibility(View.VISIBLE);
-            etDocTitle.setText("");
+            clearSelectedFile();
         });
     }
 
@@ -119,7 +124,19 @@ public class UploadDocumentActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+        String fileType = resolveSupportedFileType(uri, fileName);
+        if (fileType == null) {
+            clearSelectedFile();
+            Toast.makeText(
+                    this,
+                    "Unsupported file type. Please choose PDF, TXT, or DOCX.",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
         selectedFileName = fileName;
+        selectedFileType = fileType;
         selectedFileSize = fileSize;
 
         // Show file info card
@@ -191,6 +208,10 @@ public class UploadDocumentActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select a file first", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (selectedFileType == null) {
+            Toast.makeText(this, "Unsupported file type. Please choose PDF, TXT, or DOCX.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         String title = etDocTitle.getText() != null ? etDocTitle.getText().toString().trim() : "";
         if (title.isEmpty()) title = selectedFileName;
@@ -234,12 +255,7 @@ public class UploadDocumentActivity extends AppCompatActivity {
                 doc.setFileSize(selectedFileSize);
                 doc.setProjectId(selectedProjectId);
                 doc.setTopicId(selectedTopicId);
-                
-                // Determine file type from extension
-                String extension = "";
-                int i = selectedFileName.lastIndexOf('.');
-                if (i > 0) extension = selectedFileName.substring(i + 1).toLowerCase();
-                doc.setFileType(extension);
+                doc.setFileType(selectedFileType);
 
                 // Define storage path: userId/timestamp_filename
                 String storagePath = userId + "/" + System.currentTimeMillis() + "_" + selectedFileName;
@@ -278,6 +294,45 @@ public class UploadDocumentActivity extends AppCompatActivity {
         layoutProgress.setVisibility(uploading ? View.VISIBLE : View.GONE);
         btnUpload.setEnabled(!uploading);
         btnUpload.setText(uploading ? "Uploading..." : "Upload & Process");
+    }
+
+    private void clearSelectedFile() {
+        selectedFileUri = null;
+        selectedFileName = null;
+        selectedFileType = null;
+        selectedFileSize = 0;
+        cardFileInfo.setVisibility(View.GONE);
+        cardDropZone.setVisibility(View.VISIBLE);
+        etDocTitle.setText("");
+    }
+
+    private String resolveSupportedFileType(Uri uri, String fileName) {
+        String extension = getExtension(fileName);
+        if (isSupportedType(extension)) return extension;
+
+        String mimeType = getContentResolver().getType(uri);
+        if (mimeType == null) return null;
+        switch (mimeType.toLowerCase(Locale.US)) {
+            case "application/pdf":
+                return "pdf";
+            case "text/plain":
+                return "txt";
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                return "docx";
+            default:
+                return null;
+        }
+    }
+
+    private String getExtension(String fileName) {
+        if (fileName == null) return "";
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == fileName.length() - 1) return "";
+        return fileName.substring(dotIndex + 1).toLowerCase(Locale.US);
+    }
+
+    private boolean isSupportedType(String fileType) {
+        return "pdf".equals(fileType) || "txt".equals(fileType) || "docx".equals(fileType);
     }
 
     private String formatFileSize(long bytes) {
