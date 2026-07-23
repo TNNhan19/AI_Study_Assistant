@@ -30,7 +30,7 @@ public class FlashcardsActivity extends AppCompatActivity {
     private TextView tvCardCount, tvFrontText, tvBackText;
     private LinearLayout cardFront, cardBack, layoutLoading, layoutProgressDots;
     private FrameLayout flipCardContainer;
-    private MaterialButton btnPrev, btnNext, btnKnown, btnUnknown, btnGenerate;
+    private MaterialButton btnPrev, btnNext, btnGenerate;
     private ImageButton btnBack;
 
     private List<Flashcard> flashcards = new ArrayList<>();
@@ -72,8 +72,6 @@ public class FlashcardsActivity extends AppCompatActivity {
         layoutProgressDots = findViewById(R.id.layout_progress_dots);
         btnPrev = findViewById(R.id.btn_prev);
         btnNext = findViewById(R.id.btn_next);
-        btnKnown = findViewById(R.id.btn_known);
-        btnUnknown = findViewById(R.id.btn_unknown);
         btnGenerate = findViewById(R.id.btn_generate);
         btnBack = findViewById(R.id.btn_back);
     }
@@ -104,25 +102,6 @@ public class FlashcardsActivity extends AppCompatActivity {
             }
         });
 
-        btnKnown.setOnClickListener(v -> {
-            if (!flashcards.isEmpty()) {
-                flashcards.get(currentIndex).setKnown(true);
-                updateProgressDots();
-                // Move to next card
-                if (currentIndex < flashcards.size() - 1) {
-                    currentIndex++;
-                    isShowingFront = true;
-                    displayCard(currentIndex);
-                }
-            }
-        });
-
-        btnUnknown.setOnClickListener(v -> {
-            if (!flashcards.isEmpty()) {
-                flashcards.get(currentIndex).setKnown(false);
-                updateProgressDots();
-            }
-        });
     }
 
     private void loadFlashcards() {
@@ -273,8 +252,6 @@ public class FlashcardsActivity extends AppCompatActivity {
         layoutProgressDots.setVisibility(!loading && hasCards ? View.VISIBLE : View.GONE);
         btnPrev.setEnabled(!loading && hasCards && currentIndex > 0);
         btnNext.setEnabled(!loading && hasCards && currentIndex < flashcards.size() - 1);
-        btnKnown.setEnabled(!loading && hasCards);
-        btnUnknown.setEnabled(!loading && hasCards);
         btnGenerate.setEnabled(!loading && !hasCards);
         btnGenerate.setText(loading ? "Loading..." : hasCards ? "Generated" : "Generate");
     }
