@@ -150,6 +150,13 @@ public class QuizActivity extends AppCompatActivity {
                 setLoading(false);
                 Toast.makeText(QuizActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
+
+            @Override
+            public void onWaitingForNetwork() {
+                Toast.makeText(QuizActivity.this,
+                        "Mất kết nối. Quiz sẽ tự tạo lại khi có mạng.",
+                        Toast.LENGTH_LONG).show();
+            }
         });
     }
 

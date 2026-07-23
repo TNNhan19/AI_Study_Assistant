@@ -231,6 +231,13 @@ public class DocumentChatActivity extends AppCompatActivity {
                         if (!isActivityActive() || generation != contextGeneration) return;
                         showContextError(errorMessage);
                     }
+
+                    @Override
+                    public void onWaitingForNetwork() {
+                        if (!isActivityActive() || generation != contextGeneration) return;
+                        tvContextStatus.setText(
+                                "Mất kết nối • sẽ tự đọc lại khi có mạng");
+                    }
                 });
     }
 
@@ -316,6 +323,7 @@ public class DocumentChatActivity extends AppCompatActivity {
                         requestInProgress = false;
                         showTypingIndicator(false);
                         setInteractionEnabled(true);
+                        updateContextStatus(activeContext);
 
                         ChatMessage assistantMessage = createMessage(
                                 response, Constants.MSG_TYPE_AI);
@@ -330,9 +338,17 @@ public class DocumentChatActivity extends AppCompatActivity {
                         requestInProgress = false;
                         showTypingIndicator(false);
                         setInteractionEnabled(true);
+                        updateContextStatus(activeContext);
                         addDisplayMessage(new ChatMessage(
                                 "Không thể nhận phản hồi từ AI. " + errorMessage,
                                 Constants.MSG_TYPE_AI));
+                    }
+
+                    @Override
+                    public void onWaitingForNetwork() {
+                        if (!isActivityActive() || requestId != requestGeneration) return;
+                        tvContextStatus.setText(
+                                "Mất kết nối • câu hỏi đang chờ gửi lại");
                     }
                 });
     }
