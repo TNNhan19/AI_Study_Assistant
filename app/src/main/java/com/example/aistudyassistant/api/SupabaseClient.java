@@ -276,7 +276,7 @@ public class SupabaseClient {
             return null;
         } catch (IOException e) {
             Log.e(TAG, "Storage download error: " + e.getMessage());
-            return null;
+            throw new NetworkRequestException("Mất kết nối khi tải tài liệu", e);
         }
     }
 
@@ -321,7 +321,7 @@ public class SupabaseClient {
             return result.body;
         } catch (IOException e) {
             Log.e(TAG, "Edge Function error: " + e.getMessage());
-            return null;
+            throw new NetworkRequestException("Không thể kết nối dịch vụ AI", e);
         }
     }
 

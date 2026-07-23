@@ -127,6 +127,12 @@ public class AIChatActivity extends AppCompatActivity {
                 setRequestInProgress(false);
                 addAiMessage("Không thể nhận phản hồi từ AI. " + errorMessage);
             }
+
+            @Override
+            public void onWaitingForNetwork() {
+                if (!isActivityActive() || requestId != activeRequestId) return;
+                addAiMessage("Đã mất kết nối. Câu hỏi sẽ tự động được gửi lại khi có mạng.");
+            }
         });
     }
 

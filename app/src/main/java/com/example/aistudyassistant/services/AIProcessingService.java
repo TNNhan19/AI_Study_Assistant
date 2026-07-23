@@ -6,6 +6,7 @@ import android.os.Looper;
 
 import com.example.aistudyassistant.api.AIClient;
 import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.api.NetworkRequestException;
 import com.example.aistudyassistant.models.AIProcessingResult;
 import com.example.aistudyassistant.models.ChatContextScope;
 import com.example.aistudyassistant.models.ChatMessage;
@@ -15,6 +16,7 @@ import com.example.aistudyassistant.models.Flashcard;
 import com.example.aistudyassistant.models.LearningContext;
 import com.example.aistudyassistant.models.QuizQuestion;
 import com.example.aistudyassistant.models.Summary;
+import com.example.aistudyassistant.receivers.ConnectivityReceiver;
 import com.example.aistudyassistant.repositories.DocumentRepository;
 import com.example.aistudyassistant.utils.DocumentTextExtractor;
 import com.google.gson.JsonArray;
@@ -24,7 +26,9 @@ import com.google.gson.JsonParser;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +47,7 @@ public class AIProcessingService {
     private static final int MAX_CHAT_HISTORY_CHARS = 12_000;
     private static final int DEFAULT_QUIZ_COUNT = 10;
     private static final int DEFAULT_FLASHCARD_COUNT = 15;
+    private static final int MAX_PENDING_REQUESTS = 10;
 
     private static AIProcessingService instance;
 
@@ -50,11 +55,16 @@ public class AIProcessingService {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final DocumentRepository documentRepository;
     private final AIClient aiClient;
+    private final ConnectivityReceiver connectivityReceiver;
+    private final Object pendingLock = new Object();
+    private final Deque<PendingOperation<?>> pendingOperations = new ArrayDeque<>();
 
     private AIProcessingService(Context context) {
         PDFBoxResourceLoader.init(context.getApplicationContext());
         documentRepository = DocumentRepository.getInstance();
         aiClient = AIClient.getInstance();
+        connectivityReceiver = ConnectivityReceiver.getInstance(context);
+        connectivityReceiver.addListener(this::retryPendingOperations);
     }
 
     public static synchronized AIProcessingService getInstance(Context context) {
@@ -360,19 +370,71 @@ public class AIProcessingService {
 
     private <T> void submit(BackgroundOperation<T> operation, ApiCallback<T> callback) {
         if (callback == null) return;
+        PendingOperation<T> request = new PendingOperation<>(operation, callback);
+        if (!connectivityReceiver.isConnected()) {
+            enqueueForRetry(request);
+            return;
+        }
+        executeOperation(request);
+    }
+
+    private <T> void executeOperation(PendingOperation<T> request) {
         executor.execute(() -> {
             try {
-                T result = operation.run();
-                mainHandler.post(() -> callback.onSuccess(result));
+                T result = request.operation.run();
+                mainHandler.post(() -> request.callback.onSuccess(result));
             } catch (Exception error) {
+                if (error instanceof NetworkRequestException) {
+                    // Emulator có thể vẫn báo VALIDATED dù DNS/Internet đã mất.
+                    connectivityReceiver.reportTransportFailure();
+                }
+                if (!request.retryAttempted && !connectivityReceiver.isConnected()) {
+                    enqueueForRetry(request);
+                    return;
+                }
                 String message = error.getMessage();
                 if (message == null || message.trim().isEmpty()) {
                     message = "Không thể xử lý tài liệu";
                 }
                 String finalMessage = message;
-                mainHandler.post(() -> callback.onError(finalMessage));
+                mainHandler.post(() -> request.callback.onError(finalMessage));
             }
         });
+    }
+
+    private void enqueueForRetry(PendingOperation<?> request) {
+        boolean queued;
+        synchronized (pendingLock) {
+            queued = pendingOperations.size() < MAX_PENDING_REQUESTS;
+            if (queued) pendingOperations.addLast(request);
+        }
+
+        if (queued) {
+            mainHandler.post(request.callback::onWaitingForNetwork);
+        } else {
+            mainHandler.post(() -> request.callback.onError(
+                    "Hàng đợi AI đã đầy, vui lòng thử lại sau"));
+        }
+    }
+
+    private void retryPendingOperations() {
+        List<PendingOperation<?>> requests = new ArrayList<>();
+        synchronized (pendingLock) {
+            while (!pendingOperations.isEmpty()) {
+                requests.add(pendingOperations.removeFirst());
+            }
+        }
+
+        // Mỗi request chỉ được gửi lại một lần sau khi mạng trở lại.
+        for (PendingOperation<?> request : requests) {
+            request.retryAttempted = true;
+            executeUnchecked(request);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void executeUnchecked(PendingOperation<?> request) {
+        executeOperation((PendingOperation<T>) request);
     }
 
     private void validateDocument(Document document) {
@@ -470,5 +532,16 @@ public class AIProcessingService {
 
     private interface BackgroundOperation<T> {
         T run() throws Exception;
+    }
+
+    private static class PendingOperation<T> {
+        private final BackgroundOperation<T> operation;
+        private final ApiCallback<T> callback;
+        private boolean retryAttempted;
+
+        private PendingOperation(BackgroundOperation<T> operation, ApiCallback<T> callback) {
+            this.operation = operation;
+            this.callback = callback;
+        }
     }
 }

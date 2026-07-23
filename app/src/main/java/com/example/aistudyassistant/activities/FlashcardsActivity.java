@@ -163,6 +163,13 @@ public class FlashcardsActivity extends AppCompatActivity {
                 setLoading(false);
                 Toast.makeText(FlashcardsActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
+
+            @Override
+            public void onWaitingForNetwork() {
+                Toast.makeText(FlashcardsActivity.this,
+                        "Mất kết nối. Flashcard sẽ tự tạo lại khi có mạng.",
+                        Toast.LENGTH_LONG).show();
+            }
         });
     }
 

@@ -114,6 +114,13 @@ public class SummaryActivity extends AppCompatActivity {
                 setGenerating(false);
                 Toast.makeText(SummaryActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
+
+            @Override
+            public void onWaitingForNetwork() {
+                Toast.makeText(SummaryActivity.this,
+                        "Mất kết nối. Tóm tắt sẽ tự tạo lại khi có mạng.",
+                        Toast.LENGTH_LONG).show();
+            }
         });
     }
 
