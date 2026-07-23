@@ -51,6 +51,7 @@ public class Constants {
     public static final String EXTRA_QUIZ_ID = "quiz_id";
     public static final String EXTRA_QUIZ_SET_ID = "quiz_set_id";
     public static final String EXTRA_QUIZ_DIFFICULTY = "quiz_difficulty";
+    public static final String EXTRA_QUIZ_ANSWER_DATA = "quiz_answer_data";
 
     // ===================== Document Status =====================
     public static final String STATUS_UPLOADED = "UPLOADED";

@@ -23,6 +23,10 @@ import com.example.aistudyassistant.repositories.ProjectRepository;
 import com.example.aistudyassistant.repositories.QuizRepository;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -131,14 +135,53 @@ public class QuizHistoryActivity extends AppCompatActivity {
                     projectsById.put(project.getId(), project);
                 }
                 enrichProjectNames(projectsById);
-                runOnUiThread(QuizHistoryActivity.this::renderResults);
+                loadQuizMetadata(userId);
             }
 
             @Override
             public void onError(String errorMessage) {
-                runOnUiThread(QuizHistoryActivity.this::renderResults);
+                loadQuizMetadata(userId);
             }
         });
+    }
+
+    private void loadQuizMetadata(String userId) {
+        new Thread(() -> {
+            try {
+                Map<String, String> difficultyBySetId = new HashMap<>();
+                String setResponse = SupabaseClient.getInstance().getFromTable(
+                        Constants.TABLE_QUIZ_SETS,
+                        "user_id=eq." + userId + "&select=id,difficulty");
+                for (JsonElement row : parseRows(setResponse)) {
+                    JsonObject json = row.getAsJsonObject();
+                    difficultyBySetId.put(
+                            readString(json, "id"),
+                            readString(json, "difficulty"));
+                }
+
+                Map<String, String> setIdByQuestionId = new HashMap<>();
+                Map<String, String> difficultyByQuestionId = new HashMap<>();
+                String questionResponse = SupabaseClient.getInstance().getFromTable(
+                        Constants.TABLE_QUIZZES,
+                        "user_id=eq." + userId
+                                + "&select=id,quiz_set_id,difficulty"
+                                + "&limit=1000");
+                for (JsonElement row : parseRows(questionResponse)) {
+                    JsonObject json = row.getAsJsonObject();
+                    String questionId = readString(json, "id");
+                    setIdByQuestionId.put(questionId, readString(json, "quiz_set_id"));
+                    difficultyByQuestionId.put(questionId, readString(json, "difficulty"));
+                }
+
+                enrichQuizDifficulty(
+                        difficultyBySetId,
+                        setIdByQuestionId,
+                        difficultyByQuestionId);
+            } catch (Exception ignored) {
+                // Difficulty is helpful metadata; quiz history should still render without it.
+            }
+            runOnUiThread(QuizHistoryActivity.this::renderResults);
+        }).start();
     }
 
     private void enrichDocumentNames() {
@@ -162,6 +205,27 @@ public class QuizHistoryActivity extends AppCompatActivity {
         }
     }
 
+    private void enrichQuizDifficulty(
+            Map<String, String> difficultyBySetId,
+            Map<String, String> setIdByQuestionId,
+            Map<String, String> difficultyByQuestionId) {
+        for (QuizResult result : quizResults) {
+            String quizSetId = result.getQuizSetId();
+            if (isBlank(quizSetId) && !isBlank(result.getQuizId())) {
+                quizSetId = setIdByQuestionId.get(result.getQuizId());
+                result.setQuizSetId(quizSetId);
+            }
+
+            String difficulty = isBlank(quizSetId)
+                    ? null
+                    : difficultyBySetId.get(quizSetId);
+            if (isBlank(difficulty) && !isBlank(result.getQuizId())) {
+                difficulty = difficultyByQuestionId.get(result.getQuizId());
+            }
+            result.setDifficulty(difficulty);
+        }
+    }
+
     private void renderResults() {
         setLoading(false);
         adapter.updateResults(quizResults);
@@ -171,53 +235,19 @@ public class QuizHistoryActivity extends AppCompatActivity {
 
     private void openQuizForReview(QuizResult result) {
         Document document = documentsById.get(result.getDocumentId());
-        if (document != null) {
-            startQuiz(document, result);
-            return;
-        }
-
-        if (isBlank(result.getDocumentId())) {
-            Toast.makeText(this, "This quiz result has no document.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        setLoading(true);
-        DocumentRepository.getInstance().getDocumentById(
-                result.getDocumentId(),
-                new ApiCallback<Document>() {
-                    @Override
-                    public void onSuccess(Document document) {
-                        documentsById.put(document.getId(), document);
-                        runOnUiThread(() -> {
-                            setLoading(false);
-                            startQuiz(document, result);
-                        });
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        runOnUiThread(() -> {
-                            setLoading(false);
-                            Toast.makeText(
-                                    QuizHistoryActivity.this,
-                                    "Document is no longer available.",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-                        });
-                    }
-                }
-        );
-    }
-
-    private void startQuiz(Document document, QuizResult result) {
-        Intent intent = new Intent(this, QuizActivity.class);
-        intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
-        intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-        intent.putExtra(Constants.EXTRA_DOCUMENT_URL, document.getFilePath());
-        intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
-        intent.putExtra(Constants.EXTRA_PROJECT_ID,
-                isBlank(document.getProjectId()) ? result.getProjectId() : document.getProjectId());
-        intent.putExtra(Constants.EXTRA_TOPIC_ID, document.getTopicId());
+        Intent intent = new Intent(this, QuizReviewActivity.class);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_ID, result.getDocumentId());
+        intent.putExtra(Constants.EXTRA_DOCUMENT_NAME,
+                document == null || isBlank(document.getName())
+                        ? result.getDocumentName()
+                        : document.getName());
+        intent.putExtra(Constants.EXTRA_PROJECT_ID, result.getProjectId());
+        intent.putExtra(Constants.EXTRA_QUIZ_SET_ID, result.getQuizSetId());
+        intent.putExtra(Constants.EXTRA_QUIZ_ANSWER_DATA, result.getAnswerData());
+        intent.putExtra("score", result.getScore());
+        intent.putExtra("total_questions", result.getTotalQuestions());
+        intent.putExtra("correct_count", result.getCorrectCount());
+        intent.putExtra("wrong_count", result.getWrongCount());
         startActivity(intent);
     }
 
@@ -227,5 +257,17 @@ public class QuizHistoryActivity extends AppCompatActivity {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private JsonArray parseRows(String response) {
+        if (isBlank(response)) return new JsonArray();
+        JsonElement root = JsonParser.parseString(response);
+        return root.isJsonArray() ? root.getAsJsonArray() : new JsonArray();
+    }
+
+    private String readString(JsonObject json, String key) {
+        return !json.has(key) || json.get(key).isJsonNull()
+                ? ""
+                : json.get(key).getAsString();
     }
 }

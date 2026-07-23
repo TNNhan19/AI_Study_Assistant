@@ -31,6 +31,7 @@ public class QuizResultActivity extends AppCompatActivity {
     private String projectId;
     private String quizSetId;
     private String difficulty;
+    private String answerData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +49,7 @@ public class QuizResultActivity extends AppCompatActivity {
         projectId = getIntent().getStringExtra(Constants.EXTRA_PROJECT_ID);
         quizSetId = getIntent().getStringExtra(Constants.EXTRA_QUIZ_SET_ID);
         difficulty = getIntent().getStringExtra(Constants.EXTRA_QUIZ_DIFFICULTY);
+        answerData = getIntent().getStringExtra(Constants.EXTRA_QUIZ_ANSWER_DATA);
 
         initViews();
         displayResults();
@@ -91,8 +93,11 @@ public class QuizResultActivity extends AppCompatActivity {
         QuizResult result = new QuizResult();
         result.setUserId(userId);
         result.setQuizId(quizId);
+        result.setQuizSetId(quizSetId);
         result.setDocumentId(documentId);
         result.setProjectId(projectId);
+        result.setAnswerData(answerData);
+        result.setDifficulty(difficulty);
         result.setScore(correctAnswers);
         result.setTotalQuestions(totalQuestions);
         result.setCorrectCount(correctAnswers);

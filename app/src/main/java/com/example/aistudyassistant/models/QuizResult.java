@@ -4,10 +4,13 @@ public class QuizResult {
     private String id;
     private String userId;
     private String quizId;
+    private String quizSetId;
     private String documentId;
     private String projectId;
     private String documentName;
     private String projectName;
+    private String answerData;
+    private String difficulty;
     private int score;
     private int totalQuestions;
     private int correctCount;
@@ -32,10 +35,13 @@ public class QuizResult {
     public String getId() { return id; }
     public String getUserId() { return userId; }
     public String getQuizId() { return quizId; }
+    public String getQuizSetId() { return quizSetId; }
     public String getDocumentId() { return documentId; }
     public String getProjectId() { return projectId; }
     public String getDocumentName() { return documentName; }
     public String getProjectName() { return projectName; }
+    public String getAnswerData() { return answerData; }
+    public String getDifficulty() { return difficulty; }
     public int getScore() { return score; }
     public int getTotalQuestions() { return totalQuestions; }
     public int getCorrectCount() { return correctCount; }
@@ -65,10 +71,13 @@ public class QuizResult {
     public void setId(String id) { this.id = id; }
     public void setUserId(String userId) { this.userId = userId; }
     public void setQuizId(String quizId) { this.quizId = quizId; }
+    public void setQuizSetId(String quizSetId) { this.quizSetId = quizSetId; }
     public void setDocumentId(String documentId) { this.documentId = documentId; }
     public void setProjectId(String projectId) { this.projectId = projectId; }
     public void setDocumentName(String documentName) { this.documentName = documentName; }
     public void setProjectName(String projectName) { this.projectName = projectName; }
+    public void setAnswerData(String answerData) { this.answerData = answerData; }
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
     public void setScore(int score) { this.score = score; }
     public void setTotalQuestions(int totalQuestions) { this.totalQuestions = totalQuestions; }
     public void setCorrectCount(int correctCount) { this.correctCount = correctCount; }

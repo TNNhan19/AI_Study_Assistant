@@ -21,6 +21,8 @@ import com.example.aistudyassistant.repositories.AIContentRepository;
 import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ public class QuizActivity extends AppCompatActivity {
     private ImageButton btnBack;
 
     private List<QuizQuestion> questions = new ArrayList<>();
+    private List<String> selectedAnswers = new ArrayList<>();
     private int currentIndex = 0;
     private int correctCount = 0;
     private boolean hasAnswered = false;
@@ -226,6 +229,10 @@ public class QuizActivity extends AppCompatActivity {
     private void showQuestions(List<QuizQuestion> loadedQuestions) {
         questions.clear();
         questions.addAll(loadedQuestions);
+        selectedAnswers.clear();
+        for (int i = 0; i < questions.size(); i++) {
+            selectedAnswers.add("");
+        }
         currentIndex = 0;
         correctCount = 0;
         displayQuestion(0);
@@ -261,6 +268,7 @@ public class QuizActivity extends AppCompatActivity {
 
         QuizQuestion q = questions.get(currentIndex);
         boolean isCorrect = selected.equals(q.getCorrectAnswer());
+        selectedAnswers.set(currentIndex, selected);
 
         if (isCorrect) {
             correctCount++;
@@ -323,8 +331,26 @@ public class QuizActivity extends AppCompatActivity {
         intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
         intent.putExtra(Constants.EXTRA_QUIZ_SET_ID, quizSetId);
         intent.putExtra(Constants.EXTRA_QUIZ_DIFFICULTY, difficulty);
+        intent.putExtra(Constants.EXTRA_QUIZ_ANSWER_DATA, buildAnswerData());
         startActivity(intent);
         finish();
+    }
+
+    private String buildAnswerData() {
+        JsonArray answerRows = new JsonArray();
+        for (int i = 0; i < questions.size(); i++) {
+            QuizQuestion question = questions.get(i);
+            String selected = i < selectedAnswers.size() ? selectedAnswers.get(i) : "";
+            JsonObject row = new JsonObject();
+            row.addProperty("question_id", question.getId());
+            row.addProperty("quiz_set_id", question.getQuizSetId());
+            row.addProperty("selected_answer", selected);
+            row.addProperty("correct_answer", question.getCorrectAnswer());
+            row.addProperty("is_correct", selected.equals(question.getCorrectAnswer()));
+            row.addProperty("order_index", i);
+            answerRows.add(row);
+        }
+        return answerRows.toString();
     }
 
     private void setLoading(boolean loading) {

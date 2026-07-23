@@ -66,12 +66,14 @@ public class QuizResultHistoryAdapter
     }
 
     class QuizResultViewHolder extends RecyclerView.ViewHolder {
-        TextView tvDocument, tvFolder, tvCompletedAt, tvScore, tvCorrectWrong, tvReview;
+        TextView tvDocument, tvFolder, tvDifficulty, tvCompletedAt;
+        TextView tvScore, tvCorrectWrong, tvReview;
 
         QuizResultViewHolder(View itemView) {
             super(itemView);
             tvDocument = itemView.findViewById(R.id.tv_quiz_history_document);
             tvFolder = itemView.findViewById(R.id.tv_quiz_history_folder);
+            tvDifficulty = itemView.findViewById(R.id.tv_quiz_history_difficulty);
             tvCompletedAt = itemView.findViewById(R.id.tv_quiz_history_completed_at);
             tvScore = itemView.findViewById(R.id.tv_quiz_history_score);
             tvCorrectWrong = itemView.findViewById(R.id.tv_quiz_history_correct_wrong);
@@ -91,6 +93,16 @@ public class QuizResultHistoryAdapter
                 tvFolder.setText(context.getString(
                         R.string.quiz_folder_format,
                         result.getProjectName()
+                ));
+            }
+
+            if (isBlank(result.getDifficulty())) {
+                tvDifficulty.setVisibility(View.GONE);
+            } else {
+                tvDifficulty.setVisibility(View.VISIBLE);
+                tvDifficulty.setText(context.getString(
+                        R.string.quiz_difficulty_format,
+                        difficultyLabel(result.getDifficulty())
                 ));
             }
 
@@ -120,6 +132,12 @@ public class QuizResultHistoryAdapter
 
         private boolean isBlank(String value) {
             return value == null || value.trim().isEmpty();
+        }
+
+        private String difficultyLabel(String difficulty) {
+            if ("EASY".equalsIgnoreCase(difficulty)) return "Easy";
+            if ("HARD".equalsIgnoreCase(difficulty)) return "Hard";
+            return "Medium";
         }
     }
 }

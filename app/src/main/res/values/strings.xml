@@ -42,7 +42,18 @@
     <string name="quiz_unknown_time">Unknown time</string>
     <string name="quiz_history">Quiz History</string>
     <string name="quiz_history_correct_wrong_format">Correct: %1$d  Wrong: %2$d</string>
+    <string name="quiz_difficulty_format">Difficulty: %1$s</string>
     <string name="review_quiz">Review</string>
+    <string name="quiz_review">Quiz Review</string>
+    <string name="quiz_review_empty">Could not load the questions for this quiz.</string>
+    <string name="quiz_review_summary_format">Score: %1$d/%2$d  Correct: %3$d  Wrong: %4$d</string>
+    <string name="quiz_review_selected_format">Your answer: %1$s</string>
+    <string name="quiz_review_correct_format">Correct answer: %1$s</string>
+    <string name="quiz_review_explanation_format">Explanation: %1$s</string>
+    <string name="quiz_review_correct">Correct</string>
+    <string name="quiz_review_incorrect">Incorrect</string>
+    <string name="quiz_review_not_recorded">Answer not recorded</string>
+    <string name="quiz_review_missing_answer">Not recorded</string>
     <string name="quiz_score_format">Score: %1$d/%2$d</string>
     <string name="quiz_correct_format">Correct: %1$d</string>
     <string name="quiz_wrong_format">Wrong: %1$d</string>
@@ -205,8 +216,6 @@
     <!-- Flashcards -->
     <string name="flashcards">Flashcards</string>
     <string name="tap_to_flip">Tap to flip</string>
-    <string name="mark_known">I Know This</string>
-    <string name="mark_unknown">Need Review</string>
     <string name="card_of">Card %1$d of %2$d</string>
     <string name="flashcard_complete">You\'ve reviewed all flashcards!</string>
     <string name="no_flashcards">No flashcards yet. Generate them from the document.</string>

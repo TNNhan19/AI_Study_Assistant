@@ -41,7 +41,7 @@ public class QuizRepository {
 
                 String response = supabaseClient.insertIntoTable(
                         Constants.TABLE_QUIZ_RESULTS,
-                        buildQuizResultJson(result).toString()
+                        buildQuizResultJson(result, true).toString()
                 );
                 if (response == null) {
                     callback.onError("Could not save quiz result");
@@ -51,16 +51,25 @@ public class QuizRepository {
                 JsonArray rows;
                 try {
                     rows = parseRows(response);
-                } catch (Exception modernSchemaError) {
-                    String legacyResponse = supabaseClient.insertIntoTable(
+                } catch (Exception answerDataSchemaError) {
+                    String modernResponse = supabaseClient.insertIntoTable(
                             Constants.TABLE_QUIZ_RESULTS,
-                            buildLegacyQuizResultJson(result).toString()
+                            buildQuizResultJson(result, false).toString()
                     );
-                    if (legacyResponse == null) {
-                        callback.onError(readError(modernSchemaError, "Could not save quiz result"));
-                        return;
+                    try {
+                        rows = parseRows(modernResponse);
+                    } catch (Exception modernSchemaError) {
+                        String legacyResponse = supabaseClient.insertIntoTable(
+                                Constants.TABLE_QUIZ_RESULTS,
+                                buildLegacyQuizResultJson(result).toString()
+                        );
+                        if (legacyResponse == null) {
+                            callback.onError(readError(
+                                    modernSchemaError, "Could not save quiz result"));
+                            return;
+                        }
+                        rows = parseRows(legacyResponse);
                     }
-                    rows = parseRows(legacyResponse);
                 }
                 if (rows.size() == 0) {
                     callback.onError("Could not read saved quiz result");
@@ -158,10 +167,13 @@ public class QuizRepository {
         }).start();
     }
 
-    private JsonObject buildQuizResultJson(QuizResult result) {
+    private JsonObject buildQuizResultJson(QuizResult result, boolean includeReviewData) {
         JsonObject json = new JsonObject();
         json.addProperty("user_id", result.getUserId());
         addOptionalString(json, "quiz_id", result.getQuizId());
+        if (includeReviewData) {
+            addOptionalString(json, "quiz_set_id", result.getQuizSetId());
+        }
         addOptionalString(json, "document_id", result.getDocumentId());
         addOptionalString(json, "project_id", result.getProjectId());
         json.addProperty("score", result.getScore());
@@ -169,6 +181,9 @@ public class QuizRepository {
         json.addProperty("correct_count", result.getCorrectCount());
         json.addProperty("wrong_count", result.getWrongCount());
         json.addProperty("completed_at", formatTimestamp(result.getCompletedAt()));
+        if (includeReviewData && !isBlank(result.getAnswerData())) {
+            json.add("answer_data", JsonParser.parseString(result.getAnswerData()));
+        }
         return json;
     }
 
@@ -186,8 +201,10 @@ public class QuizRepository {
         result.setId(readString(json, "id"));
         result.setUserId(readString(json, "user_id"));
         result.setQuizId(readString(json, "quiz_id"));
+        result.setQuizSetId(readString(json, "quiz_set_id"));
         result.setDocumentId(readString(json, "document_id"));
         result.setProjectId(readString(json, "project_id"));
+        result.setAnswerData(readJsonString(json, "answer_data"));
         result.setTotalQuestions(readInt(json, "total_questions"));
         int correct = json.has("correct_count")
                 ? readInt(json, "correct_count")
@@ -236,6 +253,12 @@ public class QuizRepository {
         return !json.has(key) || json.get(key).isJsonNull()
                 ? ""
                 : json.get(key).getAsString();
+    }
+
+    private String readJsonString(JsonObject json, String key) {
+        return !json.has(key) || json.get(key).isJsonNull()
+                ? ""
+                : json.get(key).toString();
     }
 
     private int readInt(JsonObject json, String key) {

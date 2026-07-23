@@ -46,6 +46,18 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/tv_quiz_history_difficulty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/quiz_difficulty_format"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_sm"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/tv_quiz_history_completed_at"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
