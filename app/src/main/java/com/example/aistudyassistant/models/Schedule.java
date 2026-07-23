@@ -1,7 +1,7 @@
 package com.example.aistudyassistant.models;
 
 public class Schedule {
-    private int id;
+    private String id;
     private String userId;
     private String title;
     private String description;
@@ -20,7 +20,7 @@ public class Schedule {
     }
 
     // Getters
-    public int getId() { return id; }
+    public String getId() { return id; }
     public String getUserId() { return userId; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -29,7 +29,7 @@ public class Schedule {
     public long getCreatedAt() { return createdAt; }
 
     // Setters
-    public void setId(int id) { this.id = id; }
+    public void setId(String id) { this.id = id; }
     public void setUserId(String userId) { this.userId = userId; }
     public void setTitle(String title) { this.title = title; }
     public void setDescription(String description) { this.description = description; }
@@ -40,5 +40,12 @@ public class Schedule {
     /** Check if schedule is in the future */
     public boolean isUpcoming() {
         return dateTimeMillis > System.currentTimeMillis();
+    }
+
+    public int getAlarmRequestCode() {
+        if (id != null && !id.isEmpty()) {
+            return id.hashCode() & 0x7fffffff;
+        }
+        return (int) (dateTimeMillis & 0x7fffffff);
     }
 }

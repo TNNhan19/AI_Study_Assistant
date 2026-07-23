@@ -1,12 +1,16 @@
 package com.example.aistudyassistant.activities;
 
+import android.Manifest;
 import android.app.AlarmManager;
 import android.app.DatePickerDialog;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageButton;
@@ -16,9 +20,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Schedule;
+import com.example.aistudyassistant.repositories.ScheduleRepository;
 import com.example.aistudyassistant.receivers.AlarmReceiver;
 import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
@@ -43,6 +51,7 @@ public class CreateScheduleActivity extends AppCompatActivity {
     private Calendar selectedDateTime = Calendar.getInstance();
     private boolean dateSelected = false;
     private boolean timeSelected = false;
+    private boolean pendingSaveAfterNotificationPermission = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,35 +133,62 @@ public class CreateScheduleActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select a future date and time", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (switchReminder.isChecked() && !hasNotificationPermission()) {
+            pendingSaveAfterNotificationPermission = true;
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    Constants.REQUEST_CODE_NOTIFICATION_PERMISSION
+            );
+            return;
+        }
+        if (switchReminder.isChecked() && needsExactAlarmPermission()) {
+            Intent intent = new Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:" + getPackageName())
+            );
+            startActivity(intent);
+            Toast.makeText(this, "Allow exact alarms, then save the schedule again", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         setLoading(true);
 
         Schedule schedule = new Schedule(title, description,
                 selectedDateTime.getTimeInMillis(), switchReminder.isChecked());
-        schedule.setUserId(SharedPrefManager.getInstance(this).getUserId());
-
-        // TODO: Save to Supabase
-        // new Thread(() -> {
-        //     String json = buildScheduleJson(schedule);
-        //     String result = SupabaseClient.getInstance().insertIntoTable(Constants.TABLE_SCHEDULES, json);
-        //     int scheduleId = parseIdFromResult(result);
-        //     schedule.setId(scheduleId);
-        //     runOnUiThread(() -> {
-        //         setLoading(false);
-        //         if (scheduleId > 0) {
-        //             if (schedule.isReminderEnabled()) scheduleAlarm(schedule);
-        //             finish();
-        //         }
-        //     });
-        // }).start();
-
-        // For now (no API key), just schedule alarm and finish
-        if (switchReminder.isChecked()) {
-            scheduleAlarm(schedule);
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId == null || userId.isEmpty()) {
+            setLoading(false);
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_SHORT).show();
+            return;
         }
-        Toast.makeText(this, "Schedule saved!", Toast.LENGTH_SHORT).show();
-        setLoading(false);
-        finish();
+        schedule.setUserId(userId);
+
+        ScheduleRepository.getInstance().createSchedule(schedule, new ApiCallback<Schedule>() {
+            @Override
+            public void onSuccess(Schedule savedSchedule) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    if (savedSchedule.isReminderEnabled()) {
+                        scheduleAlarm(savedSchedule);
+                    }
+                    Toast.makeText(CreateScheduleActivity.this, "Schedule saved!", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(
+                            CreateScheduleActivity.this,
+                            "Could not save schedule: " + errorMessage,
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
+            }
+        });
     }
 
     private void scheduleAlarm(Schedule schedule) {
@@ -160,12 +196,12 @@ public class CreateScheduleActivity extends AppCompatActivity {
         if (alarmManager == null) return;
 
         Intent intent = new Intent(this, AlarmReceiver.class);
-        intent.putExtra(Constants.ALARM_SCHEDULE_ID, schedule.getId());
+        intent.putExtra(Constants.ALARM_SCHEDULE_ID, schedule.getAlarmRequestCode());
         intent.putExtra(Constants.ALARM_SCHEDULE_TITLE, schedule.getTitle());
         intent.putExtra("schedule_description", schedule.getDescription());
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this, schedule.getId(), intent,
+                this, schedule.getAlarmRequestCode(), intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -174,9 +210,42 @@ public class CreateScheduleActivity extends AppCompatActivity {
                     AlarmManager.RTC_WAKEUP,
                     schedule.getDateTimeMillis(),
                     pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    schedule.getDateTimeMillis(),
+                    pendingIntent);
         } else {
-            alarmManager.set(AlarmManager.RTC_WAKEUP,
-                    schedule.getDateTimeMillis(), pendingIntent);
+            alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    schedule.getDateTimeMillis(),
+                    pendingIntent);
+        }
+    }
+
+    private boolean hasNotificationPermission() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean needsExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false;
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        return alarmManager != null && !alarmManager.canScheduleExactAlarms();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == Constants.REQUEST_CODE_NOTIFICATION_PERMISSION
+                && pendingSaveAfterNotificationPermission) {
+            pendingSaveAfterNotificationPermission = false;
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                saveSchedule();
+            } else {
+                Toast.makeText(this, "Notification permission is required for reminders", Toast.LENGTH_LONG).show();
+            }
         }
     }
 

@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,7 +15,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.adapters.ScheduleAdapter;
+import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Schedule;
+import com.example.aistudyassistant.repositories.ScheduleRepository;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -77,9 +81,25 @@ public class ScheduleActivity extends AppCompatActivity {
                 .setMessage("Delete \"" + schedule.getTitle() + "\"?")
                 .setPositiveButton("Delete", (dialog, which) -> {
                     cancelAlarm(schedule);
-                    adapter.removeAt(position);
-                    updateEmptyState();
-                    // TODO: Delete from Supabase
+                    ScheduleRepository.getInstance().deleteSchedule(schedule.getId(), new ApiCallback<Boolean>() {
+                        @Override
+                        public void onSuccess(Boolean result) {
+                            runOnUiThread(() -> {
+                                adapter.removeAt(position);
+                                updateEmptyState();
+                                Toast.makeText(ScheduleActivity.this, "Schedule deleted", Toast.LENGTH_SHORT).show();
+                            });
+                        }
+
+                        @Override
+                        public void onError(String errorMessage) {
+                            runOnUiThread(() -> Toast.makeText(
+                                    ScheduleActivity.this,
+                                    "Could not delete schedule: " + errorMessage,
+                                    Toast.LENGTH_LONG
+                            ).show());
+                        }
+                    });
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -88,7 +108,7 @@ public class ScheduleActivity extends AppCompatActivity {
     private void cancelAlarm(Schedule schedule) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         Intent intent = new Intent(this, com.example.aistudyassistant.receivers.AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, schedule.getId(),
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, schedule.getAlarmRequestCode(),
                 intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (alarmManager != null) {
             alarmManager.cancel(pendingIntent);
@@ -96,8 +116,33 @@ public class ScheduleActivity extends AppCompatActivity {
     }
 
     private void loadSchedules() {
-        // TODO: Load from Supabase
-        updateEmptyState();
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        if (userId == null || userId.isEmpty()) {
+            updateEmptyState();
+            return;
+        }
+
+        ScheduleRepository.getInstance().getUpcomingSchedules(userId, new ApiCallback<List<Schedule>>() {
+            @Override
+            public void onSuccess(List<Schedule> result) {
+                runOnUiThread(() -> {
+                    adapter.updateSchedules(result);
+                    updateEmptyState();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    Toast.makeText(
+                            ScheduleActivity.this,
+                            "Could not load schedules: " + errorMessage,
+                            Toast.LENGTH_LONG
+                    ).show();
+                    updateEmptyState();
+                });
+            }
+        });
     }
 
     private void updateEmptyState() {

@@ -23,6 +23,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
 
     private final Context context;
     private final List<Schedule> schedules;
+    private final boolean showDeleteButton;
     private OnScheduleClickListener listener;
 
     public interface OnScheduleClickListener {
@@ -31,8 +32,13 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     }
 
     public ScheduleAdapter(Context context, List<Schedule> schedules) {
+        this(context, schedules, true);
+    }
+
+    public ScheduleAdapter(Context context, List<Schedule> schedules, boolean showDeleteButton) {
         this.context = context;
         this.schedules = schedules;
+        this.showDeleteButton = showDeleteButton;
     }
 
     public void setListener(OnScheduleClickListener listener) {
@@ -62,6 +68,10 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     }
 
     public void updateSchedules(List<Schedule> newSchedules) {
+        if (schedules == newSchedules) {
+            notifyDataSetChanged();
+            return;
+        }
         schedules.clear();
         schedules.addAll(newSchedules);
         notifyDataSetChanged();
@@ -96,6 +106,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
                     ? schedule.getDescription() : "No description");
             tvDate.setText(new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                     .format(new Date(schedule.getDateTimeMillis())));
+            btnDelete.setVisibility(showDeleteButton ? View.VISIBLE : View.GONE);
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onScheduleClick(schedule);
