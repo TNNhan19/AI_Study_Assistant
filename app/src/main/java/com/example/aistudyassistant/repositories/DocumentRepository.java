@@ -41,7 +41,6 @@ public class DocumentRepository {
     public void getAllDocuments(String userId, ApiCallback<List<Document>> callback) {
         new Thread(() -> {
             try {
-                // Query: filter by user_id, order by created_at descending
                 String query = "user_id=eq." + userId + "&order=created_at.desc";
                 String response = supabaseClient.getFromTable(Constants.TABLE_DOCUMENTS, query);
 
@@ -62,6 +61,69 @@ public class DocumentRepository {
         }).start();
     }
 
+    public void getDocumentById(String documentId, ApiCallback<Document> callback) {
+        new Thread(() -> {
+            try {
+                List<Document> documents = getDocumentsBlocking(
+                        "id=eq." + documentId + "&limit=1");
+                if (documents.isEmpty()) {
+                    callback.onError("Không tìm thấy tài liệu");
+                    return;
+                }
+                callback.onSuccess(documents.get(0));
+            } catch (Exception e) {
+                callback.onError(e.getMessage());
+            }
+        }).start();
+    }
+
+    public List<Document> getDocumentsByTopicBlocking(String topicId) {
+        return getDocumentsBlocking(
+                "topic_id=eq." + topicId + "&order=created_at.desc");
+    }
+
+    public List<Document> getDocumentsByProjectBlocking(String projectId) {
+        return getDocumentsBlocking(
+                "project_id=eq." + projectId + "&order=created_at.desc");
+    }
+
+    private List<Document> getDocumentsBlocking(String query) {
+        String response = supabaseClient.getFromTable(Constants.TABLE_DOCUMENTS, query);
+        if (response == null) {
+            throw new IllegalStateException("Không thể tải danh sách tài liệu");
+        }
+
+        JsonArray jsonArray = JsonParser.parseString(response).getAsJsonArray();
+        List<Document> documents = new ArrayList<>();
+        for (JsonElement element : jsonArray) {
+            documents.add(parseDocument(element.getAsJsonObject()));
+        }
+        return documents;
+    }
+
+    private Document parseDocument(JsonObject obj) {
+        Document document = new Document();
+        document.setId(obj.get("id").getAsString());
+        document.setUserId(obj.get("user_id").getAsString());
+        document.setName(obj.get("name").getAsString());
+        document.setFilePath(obj.get("file_path").getAsString());
+        document.setFileType(obj.has("file_type") && !obj.get("file_type").isJsonNull()
+                ? obj.get("file_type").getAsString() : "pdf");
+        document.setFileSize(obj.has("file_size") && !obj.get("file_size").isJsonNull()
+                ? obj.get("file_size").getAsLong() : 0);
+        document.setStatus(obj.has("status") && !obj.get("status").isJsonNull()
+                ? obj.get("status").getAsString() : Constants.STATUS_UPLOADED);
+        document.setFavorite(obj.has("is_favorite") && !obj.get("is_favorite").isJsonNull()
+                && obj.get("is_favorite").getAsBoolean());
+        if (obj.has("project_id") && !obj.get("project_id").isJsonNull()) {
+            document.setProjectId(obj.get("project_id").getAsString());
+        }
+        if (obj.has("topic_id") && !obj.get("topic_id").isJsonNull()) {
+            document.setTopicId(obj.get("topic_id").getAsString());
+        }
+        return document;
+    }
+
     /**
      * Downloads a document from the private Storage bucket without changing its bytes,
      * then stores it in the app cache so it can be shared through FileProvider.
@@ -69,16 +131,7 @@ public class DocumentRepository {
     public void downloadDocument(Document document, File cacheDir, ApiCallback<File> callback) {
         new Thread(() -> {
             try {
-                if (document == null || document.getFilePath() == null
-                        || document.getFilePath().trim().isEmpty()) {
-                    callback.onError("Document path is missing");
-                    return;
-                }
-
-                byte[] fileBytes = supabaseClient.downloadFile(
-                        Constants.STORAGE_BUCKET,
-                        document.getFilePath()
-                );
+                byte[] fileBytes = downloadDocumentBytes(document);
                 if (fileBytes == null) {
                     callback.onError("Could not download document");
                     return;
@@ -105,6 +158,20 @@ public class DocumentRepository {
                 callback.onError(e.getMessage() != null ? e.getMessage() : "Could not cache document");
             }
         }).start();
+    }
+
+    /**
+     * Tải byte gốc của tài liệu. Hàm blocking nên chỉ gọi từ background thread.
+     */
+    public byte[] downloadDocumentBytes(Document document) {
+        if (document == null || document.getFilePath() == null
+                || document.getFilePath().trim().isEmpty()) {
+            return null;
+        }
+        return supabaseClient.downloadFile(
+                Constants.STORAGE_BUCKET,
+                document.getFilePath()
+        );
     }
 
     private String sanitizeExtension(String fileType) {

@@ -111,6 +111,7 @@ public class DocumentsActivity extends AppCompatActivity {
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
                 startActivity(intent);
             }
 
@@ -217,6 +218,7 @@ public class DocumentsActivity extends AppCompatActivity {
                 intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
                 intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
+                intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
                 startActivity(intent);
                 return true;
             }
@@ -273,7 +275,7 @@ public class DocumentsActivity extends AppCompatActivity {
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_chat) {
-                startActivity(new Intent(this, ChatActivity.class));
+                startActivity(new Intent(this, AIChatActivity.class));
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_profile) {

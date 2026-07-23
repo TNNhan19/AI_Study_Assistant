@@ -34,6 +34,7 @@ public class DocumentDetailActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentPath;
+    private String documentType;
     private String projectId, topicId;
     private Document currentDocument;
     private boolean isOpeningDocument;
@@ -46,6 +47,7 @@ public class DocumentDetailActivity extends AppCompatActivity {
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentPath = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_PATH);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
         if (documentPath == null) {
             // Backward compatibility with callers that used the old extra name.
             documentPath = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
@@ -69,6 +71,8 @@ public class DocumentDetailActivity extends AppCompatActivity {
                 for (Document doc : result) {
                     if (doc.getId().equals(documentId)) {
                         currentDocument = doc;
+                        documentName = doc.getName();
+                        documentType = doc.getFileType();
                         projectId = doc.getProjectId();
                         topicId = doc.getTopicId();
                         documentPath = doc.getFilePath();
@@ -137,8 +141,11 @@ public class DocumentDetailActivity extends AppCompatActivity {
         Intent intent = new Intent(this, activityClass);
         intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
         intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
-        // Existing feature screens still use this key; its value is now the private path.
+        // Truyền private Storage path cho các màn hình AI.
         intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentPath);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+        intent.putExtra(Constants.EXTRA_PROJECT_ID, projectId);
+        intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
         startActivity(intent);
     }
 

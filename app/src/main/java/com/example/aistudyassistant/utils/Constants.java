@@ -27,12 +27,8 @@ public class Constants {
     // Supabase Storage Bucket
     public static final String STORAGE_BUCKET = "documents";
 
-    // ===================== Gemini API Configuration =====================
-    // TODO: Replace this with your actual Gemini API Key
-    public static final String GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
-    public static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/";
-    public static final String GEMINI_MODEL = "gemini-1.5-flash";
-    public static final String GEMINI_MODEL_PRO = "gemini-1.5-pro";
+    // Supabase Edge Functions
+    public static final String FUNCTION_AI_GATEWAY = "ai-gateway";
 
     // ===================== SharedPreferences Keys =====================
     public static final String PREF_NAME = "AIStudyAssistantPrefs";
@@ -48,6 +44,9 @@ public class Constants {
     public static final String EXTRA_DOCUMENT_NAME = "document_name";
     public static final String EXTRA_DOCUMENT_URL = "document_url";
     public static final String EXTRA_DOCUMENT_PATH = "document_path";
+    public static final String EXTRA_DOCUMENT_TYPE = "document_type";
+    public static final String EXTRA_PROJECT_ID = "project_id";
+    public static final String EXTRA_TOPIC_ID = "topic_id";
     public static final String EXTRA_SCHEDULE_ID = "schedule_id";
     public static final String EXTRA_QUIZ_ID = "quiz_id";
 

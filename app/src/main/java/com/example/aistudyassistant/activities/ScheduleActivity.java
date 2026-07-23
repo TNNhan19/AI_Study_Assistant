@@ -119,7 +119,7 @@ public class ScheduleActivity extends AppCompatActivity {
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_chat) {
-                startActivity(new Intent(this, ChatActivity.class));
+                startActivity(new Intent(this, AIChatActivity.class));
                 overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_profile) {

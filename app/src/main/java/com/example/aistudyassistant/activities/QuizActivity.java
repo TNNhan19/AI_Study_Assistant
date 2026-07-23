@@ -1,7 +1,6 @@
 package com.example.aistudyassistant.activities;
 
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
@@ -12,17 +11,16 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
-import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.api.GeminiClient;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.models.QuizQuestion;
-import com.example.aistudyassistant.models.QuizResult;
+import com.example.aistudyassistant.repositories.AIContentRepository;
+import com.example.aistudyassistant.services.AIProcessingService;
 import com.example.aistudyassistant.utils.Constants;
+import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +33,7 @@ public class QuizActivity extends AppCompatActivity {
     private LinearLayout layoutLoading;
     private CardView cardFeedback;
     private ProgressBar progressQuiz;
-    private MaterialButton btnNext, btnGenerate;
+    private MaterialButton btnNext;
     private ImageButton btnBack;
 
     private List<QuizQuestion> questions = new ArrayList<>();
@@ -46,6 +44,8 @@ public class QuizActivity extends AppCompatActivity {
     private String documentId;
     private String documentName;
     private String documentUrl;
+    private String documentType;
+    private String topicId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +55,8 @@ public class QuizActivity extends AppCompatActivity {
         documentId = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_ID);
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
+        documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
         setupClickListeners();
@@ -105,72 +107,82 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void loadQuestions() {
-        // TODO: First check Supabase for existing quiz questions
-        // If not found, generate via Gemini
+        setLoading(true);
+        String userId = SharedPrefManager.getInstance(this).getUserId();
+        AIContentRepository.getInstance().getQuizQuestionsByDocument(
+                userId, documentId,
+                new ApiCallback<List<QuizQuestion>>() {
+            @Override
+            public void onSuccess(List<QuizQuestion> result) {
+                runOnUiThread(() -> {
+                    if (result.isEmpty()) {
+                        generateQuiz();
+                    } else {
+                        setLoading(false);
+                        showQuestions(result);
+                    }
+                });
+            }
 
-        // MOCK: Generate with mock data for now
-        generateQuiz();
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(QuizActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void generateQuiz() {
         setLoading(true);
-
-        new Thread(() -> {
-            String documentText = "Sample document content."; // TODO: Load actual document
-            String responseJson = GeminiClient.getInstance().generateQuiz(documentText, 10);
-
-            runOnUiThread(() -> {
-                setLoading(false);
-                if (responseJson != null) {
-                    parseAndDisplayQuiz(responseJson);
-                } else {
-                    // Load demo questions if API not configured
-                    loadDemoQuestions();
-                }
-            });
-        }).start();
-    }
-
-    private void parseAndDisplayQuiz(String json) {
-        try {
-            String cleaned = json.trim();
-            if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
-            if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
-            if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
-
-            JsonArray array = JsonParser.parseString(cleaned.trim()).getAsJsonArray();
-            questions.clear();
-            for (int i = 0; i < array.size(); i++) {
-                JsonObject obj = array.get(i).getAsJsonObject();
-                QuizQuestion q = new QuizQuestion(
-                        obj.get("question").getAsString(),
-                        obj.get("optionA").getAsString(),
-                        obj.get("optionB").getAsString(),
-                        obj.get("optionC").getAsString(),
-                        obj.get("optionD").getAsString(),
-                        obj.get("correctAnswer").getAsString(),
-                        obj.get("explanation").getAsString()
-                );
-                questions.add(q);
+        AIProcessingService.getInstance(this).generateQuiz(
+                buildDocument(), 10,
+                new ApiCallback<List<QuizQuestion>>() {
+            @Override
+            public void onSuccess(List<QuizQuestion> result) {
+                saveQuestions(result);
             }
-            currentIndex = 0;
-            correctCount = 0;
-            displayQuestion(0);
-        } catch (Exception e) {
-            loadDemoQuestions();
-        }
+
+            @Override
+            public void onError(String errorMessage) {
+                setLoading(false);
+                Toast.makeText(QuizActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
-    private void loadDemoQuestions() {
+    private void saveQuestions(List<QuizQuestion> generatedQuestions) {
+        AIContentRepository.getInstance().saveQuizQuestions(
+                buildDocument(), generatedQuestions,
+                new ApiCallback<List<QuizQuestion>>() {
+            @Override
+            public void onSuccess(List<QuizQuestion> savedQuestions) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    showQuestions(savedQuestions);
+                    Toast.makeText(QuizActivity.this,
+                            "Quiz saved", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    Toast.makeText(QuizActivity.this,
+                            errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showQuestions(List<QuizQuestion> loadedQuestions) {
         questions.clear();
-        questions.add(new QuizQuestion(
-                "What protocol ensures reliable data transmission?",
-                "UDP", "TCP", "HTTP", "FTP",
-                "B", "TCP (Transmission Control Protocol) is connection-oriented and ensures reliable delivery."));
-        questions.add(new QuizQuestion(
-                "Which layer of OSI model handles routing?",
-                "Application", "Transport", "Network", "Data Link",
-                "C", "The Network layer handles routing and logical addressing (IP)."));
+        questions.addAll(loadedQuestions);
+        currentIndex = 0;
+        correctCount = 0;
         displayQuestion(0);
     }
 
@@ -199,7 +211,7 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void checkAnswer(String selected) {
-        if (hasAnswered) return;
+        if (hasAnswered || questions.isEmpty()) return;
         hasAnswered = true;
 
         QuizQuestion q = questions.get(currentIndex);
@@ -257,11 +269,25 @@ public class QuizActivity extends AppCompatActivity {
         intent.putExtra("correct_answers", correctCount);
         intent.putExtra(Constants.EXTRA_DOCUMENT_ID, documentId);
         intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, documentName);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_URL, documentUrl);
+        intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, documentType);
+        intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
         startActivity(intent);
         finish();
     }
 
     private void setLoading(boolean loading) {
         layoutLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
+    }
+
+    private Document buildDocument() {
+        Document document = new Document();
+        document.setId(documentId);
+        document.setUserId(SharedPrefManager.getInstance(this).getUserId());
+        document.setName(documentName);
+        document.setFilePath(documentUrl);
+        document.setFileType(documentType);
+        document.setTopicId(topicId);
+        return document;
     }
 }
