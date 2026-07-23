@@ -1,10 +1,10 @@
 -- Kết quả mong đợi: các query "missing" đều trả về 0 dòng.
 
--- 1. Kiểm tra 11 bảng foundation và trạng thái RLS.
+-- 1. Kiểm tra các bảng foundation và trạng thái RLS.
 with expected_tables(table_name) as (
     values
         ('users'), ('projects'), ('topics'), ('documents'), ('summaries'),
-        ('flashcards'), ('quizzes'), ('notes'), ('study_plans'),
+        ('flashcards'), ('quizzes'), ('quiz_sets'), ('notes'), ('study_plans'),
         ('reminders'), ('chat_history')
 )
 select
@@ -37,7 +37,10 @@ with expected_columns(table_name, column_name) as (
         ('flashcards', 'document_id'), ('flashcards', 'front'),
         ('flashcards', 'back'),
         ('quizzes', 'id'), ('quizzes', 'user_id'),
-        ('quizzes', 'document_id'), ('quizzes', 'question'),
+        ('quizzes', 'document_id'), ('quizzes', 'quiz_set_id'),
+        ('quizzes', 'question'),
+        ('quiz_sets', 'id'), ('quiz_sets', 'user_id'),
+        ('quiz_sets', 'document_id'), ('quiz_sets', 'difficulty'),
         ('notes', 'id'), ('notes', 'user_id'), ('notes', 'title'),
         ('notes', 'is_pinned'),
         ('study_plans', 'id'), ('study_plans', 'user_id'),
@@ -56,11 +59,12 @@ left join information_schema.columns
 where information_schema.columns.column_name is null
 order by expected_columns.table_name, expected_columns.column_name;
 
--- 3. Tìm CRUD policy còn thiếu trên 10 bảng có user_id.
+-- 3. Tìm CRUD policy còn thiếu trên các bảng có user_id.
 with target_tables(table_name) as (
     values
         ('projects'), ('topics'), ('documents'), ('summaries'), ('flashcards'),
-        ('quizzes'), ('notes'), ('study_plans'), ('reminders'), ('chat_history')
+        ('quizzes'), ('quiz_sets'), ('notes'), ('study_plans'),
+        ('reminders'), ('chat_history')
 ), required_commands(cmd) as (
     values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')
 )
@@ -80,7 +84,7 @@ from pg_policies
 where schemaname = 'public'
   and tablename in (
       'users', 'projects', 'topics', 'documents', 'summaries', 'flashcards',
-      'quizzes', 'notes', 'study_plans', 'reminders', 'chat_history'
+      'quizzes', 'quiz_sets', 'notes', 'study_plans', 'reminders', 'chat_history'
   )
 order by tablename, cmd;
 

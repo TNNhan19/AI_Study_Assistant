@@ -55,6 +55,46 @@
     <string name="qa_quiz">View Quiz</string>
     <string name="qa_flashcards">Flashcards</string>
     <string name="qa_schedule">Schedule</string>
+    <string name="my_quizzes">My Quizzes</string>
+    <string name="my_flashcards">My Flashcards</string>
+    <string name="quiz_library_subtitle">Choose a quiz to take it again</string>
+    <string name="flashcard_library_subtitle">Choose a flashcard set to review</string>
+    <string name="no_saved_quizzes">No saved quizzes yet</string>
+    <string name="no_saved_quizzes_message">Generate a quiz from a document, then it will appear here.</string>
+    <string name="no_saved_flashcards">No saved flashcards yet</string>
+    <string name="no_saved_flashcards_message">Generate flashcards from a document, then they will appear here.</string>
+    <string name="choose_document">Choose Document</string>
+    <string name="retake_quiz_action">Retake</string>
+    <string name="review_flashcards_action">Review</string>
+    <string name="study_set_context">Project: %1$s • Topic: %2$s</string>
+    <string name="no_project">No project</string>
+    <string name="no_topic">No topic</string>
+    <string name="session_required">Please sign in again to view saved study content.</string>
+    <string name="search_quizzes">Search quiz, document, project, or topic</string>
+    <string name="quiz_source_document">Document: %1$s</string>
+    <string name="pinned">PINNED</string>
+    <string name="pin_quiz">Pin quiz</string>
+    <string name="unpin_quiz">Unpin quiz</string>
+    <string name="rename_quiz">Rename quiz</string>
+    <string name="delete_quiz">Delete quiz</string>
+    <string name="rename_quiz_hint">Quiz name</string>
+    <string name="rename_quiz_success">Quiz renamed</string>
+    <string name="pin_quiz_success">Quiz pinned</string>
+    <string name="unpin_quiz_success">Quiz unpinned</string>
+    <string name="delete_quiz_success">Quiz deleted</string>
+    <string name="delete_quiz_confirm">Delete “%1$s” and all of its questions? This action cannot be undone.</string>
+    <string name="quiz_name_required">Please enter a quiz name.</string>
+    <string name="no_matching_quizzes">No quizzes match your search.</string>
+    <string name="more_options">More options</string>
+
+    <plurals name="quiz_question_count">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
+    <plurals name="flashcard_count">
+        <item quantity="one">%d flashcard</item>
+        <item quantity="other">%d flashcards</item>
+    </plurals>
 
     <!-- Documents -->
     <string name="documents">Documents</string>

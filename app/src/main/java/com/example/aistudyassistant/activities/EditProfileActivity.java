@@ -10,6 +10,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aistudyassistant.R;
+import com.example.aistudyassistant.api.ApiCallback;
+import com.example.aistudyassistant.models.User;
+import com.example.aistudyassistant.repositories.UserRepository;
 import com.example.aistudyassistant.utils.SharedPrefManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -60,25 +63,35 @@ public class EditProfileActivity extends AppCompatActivity {
         }
 
         setLoading(true);
+        SharedPrefManager preferences = SharedPrefManager.getInstance(this);
+        UserRepository.getInstance().updateFullName(
+                preferences.getUserId(),
+                newName,
+                new ApiCallback<User>() {
+                    @Override
+                    public void onSuccess(User user) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            preferences.updateUserName(user.getFullName());
+                            setLoading(false);
+                            Toast.makeText(EditProfileActivity.this,
+                                    "Profile updated!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        });
+                    }
 
-        // TODO: Update profile in Supabase
-        // new Thread(() -> {
-        //     String userId = SharedPrefManager.getInstance(this).getUserId();
-        //     String json = "{\"full_name\":\"" + newName + "\"}";
-        //     SupabaseClient.getInstance().updateInTable(Constants.TABLE_USERS, userId, json);
-        //     runOnUiThread(() -> {
-        //         SharedPrefManager.getInstance(this).updateUserName(newName);
-        //         setLoading(false);
-        //         Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
-        //         finish();
-        //     });
-        // }).start();
-
-        // Without API: just save locally
-        SharedPrefManager.getInstance(this).updateUserName(newName);
-        setLoading(false);
-        Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
-        finish();
+                    @Override
+                    public void onError(String errorMessage) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            setLoading(false);
+                            Toast.makeText(EditProfileActivity.this,
+                                    "Could not update profile: " + errorMessage,
+                                    Toast.LENGTH_LONG).show();
+                        });
+                    }
+                }
+        );
     }
 
     private void setLoading(boolean loading) {
