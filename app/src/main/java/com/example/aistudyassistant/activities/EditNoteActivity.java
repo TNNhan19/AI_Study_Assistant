@@ -8,12 +8,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.aistudyassistant.R;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Note;
 import com.example.aistudyassistant.repositories.NoteRepository;
+import com.example.aistudyassistant.utils.Constants;
 import com.example.aistudyassistant.utils.SharedPrefManager;
+import com.google.android.material.snackbar.Snackbar;
 
 public class EditNoteActivity extends AppCompatActivity {
 
@@ -21,7 +24,7 @@ public class EditNoteActivity extends AppCompatActivity {
     private TextView tvToolbarTitle;
     private NoteRepository repository;
     
-    private String noteId, documentId;
+    private String noteId, documentId, topicId;
     private boolean isPinned;
 
     @Override
@@ -33,6 +36,7 @@ public class EditNoteActivity extends AppCompatActivity {
         
         noteId = getIntent().getStringExtra("note_id");
         documentId = getIntent().getStringExtra("document_id");
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
         isPinned = getIntent().getBooleanExtra("note_pinned", false);
 
         initViews();
@@ -59,8 +63,19 @@ public class EditNoteActivity extends AppCompatActivity {
         String title = etTitle.getText().toString().trim();
         String content = etContent.getText().toString().trim();
 
-        if (TextUtils.isEmpty(title)) {
-            Toast.makeText(this, "Title is required", Toast.LENGTH_SHORT).show();
+        if (TextUtils.isEmpty(title) || TextUtils.isEmpty(content)) {
+            int messageRes;
+            if (TextUtils.isEmpty(title) && TextUtils.isEmpty(content)) {
+                messageRes = R.string.note_validation_title_and_content;
+                etTitle.requestFocus();
+            } else if (TextUtils.isEmpty(title)) {
+                messageRes = R.string.note_validation_title;
+                etTitle.requestFocus();
+            } else {
+                messageRes = R.string.note_validation_content;
+                etContent.requestFocus();
+            }
+            showValidationError(messageRes);
             return;
         }
 
@@ -71,6 +86,7 @@ public class EditNoteActivity extends AppCompatActivity {
             Note note = new Note();
             note.setUserId(userId);
             note.setDocumentId(documentId);
+            note.setTopicId(topicId);
             note.setTitle(title);
             note.setContent(content);
             note.setPinned(false);
@@ -110,5 +126,17 @@ public class EditNoteActivity extends AppCompatActivity {
                 }
             });
         }
+    }
+
+    private void showValidationError(int messageRes) {
+        Snackbar snackbar = Snackbar.make(
+                findViewById(android.R.id.content),
+                messageRes,
+                Snackbar.LENGTH_LONG);
+        snackbar.setBackgroundTint(ContextCompat.getColor(
+                this, R.color.validation_error_background));
+        snackbar.setTextColor(ContextCompat.getColor(
+                this, R.color.validation_error_text));
+        snackbar.show();
     }
 }

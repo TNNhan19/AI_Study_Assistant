@@ -2,9 +2,12 @@ package com.example.aistudyassistant.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -31,6 +34,9 @@ import java.util.List;
 
 public class SearchActivity extends AppCompatActivity {
 
+    private static final long SEARCH_DEBOUNCE_MS = 450L;
+    private static final int MIN_QUERY_LENGTH = 2;
+
     private TextInputEditText etSearch;
     private ImageButton btnBack;
     private LinearLayout layoutRecent, layoutResults, layoutEmpty;
@@ -43,6 +49,11 @@ public class SearchActivity extends AppCompatActivity {
     private final List<SearchResult> searchResults = new ArrayList<>();
     private final List<String> recentSearches = new ArrayList<>();
     private SearchRepository repository;
+    private final Handler searchHandler =
+            new Handler(Looper.getMainLooper());
+    private Runnable pendingSearch;
+    private int searchGeneration;
+    private boolean destroyed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +88,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void handleResultClick(SearchResult result) {
+        rememberCurrentQuery();
         Intent intent;
         switch (result.getType()) {
             case DOCUMENT:
@@ -121,17 +133,53 @@ public class SearchActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
-                if (query.isEmpty()) {
+                if (query.length() < MIN_QUERY_LENGTH) {
+                    cancelPendingSearch();
+                    repository.cancelActiveSearch();
+                    searchGeneration++;
                     showState("recent");
-                } else if (query.length() >= 2) {
-                    performSearch(query);
+                } else {
+                    scheduleSearch(query);
                 }
             }
             @Override public void afterTextChanged(Editable s) {}
         });
+
+        etSearch.setOnEditorActionListener((view, actionId, event) -> {
+            if (actionId != EditorInfo.IME_ACTION_SEARCH) return false;
+            String query = etSearch.getText() == null
+                    ? "" : etSearch.getText().toString().trim();
+            if (query.length() < MIN_QUERY_LENGTH) return true;
+
+            cancelPendingSearch();
+            int generation = ++searchGeneration;
+            performSearch(query, generation, true);
+            return true;
+        });
     }
 
-    private void performSearch(String query) {
+    private void scheduleSearch(String query) {
+        cancelPendingSearch();
+        repository.cancelActiveSearch();
+        int generation = ++searchGeneration;
+        pendingSearch = () -> {
+            pendingSearch = null;
+            performSearch(query, generation, false);
+        };
+        searchHandler.postDelayed(
+                pendingSearch, SEARCH_DEBOUNCE_MS);
+    }
+
+    private void cancelPendingSearch() {
+        if (pendingSearch == null) return;
+        searchHandler.removeCallbacks(pendingSearch);
+        pendingSearch = null;
+    }
+
+    private void performSearch(
+            String query,
+            int generation,
+            boolean saveAsRecent) {
         String userId = SharedPrefManager.getInstance(this).getUserId();
         if (userId.isEmpty()) return;
 
@@ -141,28 +189,51 @@ public class SearchActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<SearchResult> result) {
                 runOnUiThread(() -> {
+                    if (!isLatestSearch(query, generation)) return;
                     searchResults.clear();
                     searchResults.addAll(result);
                     adapter.notifyDataSetChanged();
                     showState(searchResults.isEmpty() ? "empty" : "results");
+                    if (saveAsRecent) {
+                        addRecentSearch(query);
+                    }
                 });
             }
 
             @Override
             public void onError(String errorMessage) {
                 runOnUiThread(() -> {
+                    if (!isLatestSearch(query, generation)) return;
                     Toast.makeText(SearchActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                     showState("empty");
                 });
             }
         });
+    }
 
-        // Save to recent
-        if (!recentSearches.contains(query)) {
-            recentSearches.add(0, query);
-            if (recentSearches.size() > 8) recentSearches.remove(recentSearches.size() - 1);
-            saveRecentSearches();
+    private boolean isLatestSearch(String query, int generation) {
+        String currentQuery = etSearch.getText() == null
+                ? "" : etSearch.getText().toString().trim();
+        return !destroyed
+                && generation == searchGeneration
+                && query.equals(currentQuery);
+    }
+
+    private void rememberCurrentQuery() {
+        String query = etSearch.getText() == null
+                ? "" : etSearch.getText().toString().trim();
+        if (query.length() >= MIN_QUERY_LENGTH) {
+            addRecentSearch(query);
         }
+    }
+
+    private void addRecentSearch(String query) {
+        recentSearches.remove(query);
+        recentSearches.add(0, query);
+        if (recentSearches.size() > 8) {
+            recentSearches.remove(recentSearches.size() - 1);
+        }
+        saveRecentSearches();
     }
 
     private void loadRecentSearches() {
@@ -231,5 +302,14 @@ public class SearchActivity extends AppCompatActivity {
                 layoutEmpty.setVisibility(View.VISIBLE);
                 break;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        destroyed = true;
+        cancelPendingSearch();
+        repository.cancelActiveSearch();
+        searchGeneration++;
+        super.onDestroy();
     }
 }

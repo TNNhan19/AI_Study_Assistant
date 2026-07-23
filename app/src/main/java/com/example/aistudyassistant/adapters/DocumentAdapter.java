@@ -15,6 +15,7 @@ import com.example.aistudyassistant.models.Document;
 import com.example.aistudyassistant.utils.Constants;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -59,8 +60,9 @@ public class DocumentAdapter extends RecyclerView.Adapter<DocumentAdapter.Docume
     }
 
     public void updateDocuments(List<Document> newDocs) {
+        List<Document> updatedDocuments = new ArrayList<>(newDocs);
         documents.clear();
-        documents.addAll(newDocs);
+        documents.addAll(updatedDocuments);
         notifyDataSetChanged();
     }
 

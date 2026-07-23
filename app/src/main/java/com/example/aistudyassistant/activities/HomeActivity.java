@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aistudyassistant.R;
-import com.example.aistudyassistant.adapters.DocumentAdapter;
+import com.example.aistudyassistant.adapters.RecentDocumentAdapter;
 import com.example.aistudyassistant.adapters.ScheduleAdapter;
 import com.example.aistudyassistant.api.ApiCallback;
 import com.example.aistudyassistant.models.Document;
@@ -25,8 +25,10 @@ import com.example.aistudyassistant.api.SupabaseClient;
 import com.example.aistudyassistant.models.Project;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -40,7 +42,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigation;
 
-    private DocumentAdapter documentAdapter;
+    private RecentDocumentAdapter documentAdapter;
     private ScheduleAdapter scheduleAdapter;
 
     private final List<Document> recentDocs = new ArrayList<>();
@@ -55,8 +57,6 @@ public class HomeActivity extends AppCompatActivity {
         setupQuickActions();
         setupRecyclerViews();
         setupBottomNavigation();
-        loadData();
-
         String userId = SharedPrefManager.getInstance(this).getUserId();
 
         // Đảm bảo request test DB dùng access token của user đang login.
@@ -128,26 +128,18 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerViews() {
-        documentAdapter = new DocumentAdapter(this, recentDocs);
-        documentAdapter.setListener(new DocumentAdapter.OnDocumentClickListener() {
-            @Override
-            public void onDocumentClick(Document document) {
-                Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
-                intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
-                intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
-                startActivity(intent);
-            }
-            @Override
-            public void onDocumentMoreClick(Document document, View anchorView) { }
-
-            @Override
-            public void onFavoriteClick(Document document) {
-                // Handle favorite toggle from home if needed
-            }
+        documentAdapter = new RecentDocumentAdapter(this);
+        documentAdapter.setListener(document -> {
+            SharedPrefManager.getInstance(this).addRecentDocument(document.getId());
+            Intent intent = new Intent(HomeActivity.this, DocumentDetailActivity.class);
+            intent.putExtra(Constants.EXTRA_DOCUMENT_ID, document.getId());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_NAME, document.getName());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_PATH, document.getFilePath());
+            intent.putExtra(Constants.EXTRA_DOCUMENT_TYPE, document.getFileType());
+            startActivity(intent);
         });
-        rvRecentDocs.setLayoutManager(new LinearLayoutManager(this));
+        rvRecentDocs.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvRecentDocs.setAdapter(documentAdapter);
         rvRecentDocs.setNestedScrollingEnabled(false);
 
@@ -188,26 +180,42 @@ public class HomeActivity extends AppCompatActivity {
         if (userId.isEmpty()) return;
 
         // 1. Load Recent Documents from SharedPreferences
-        List<String> recentIds = SharedPrefManager.getInstance(this).getRecentDocumentIds();
+        SharedPrefManager sharedPrefs = SharedPrefManager.getInstance(this);
+        List<String> recentIds = sharedPrefs.getRecentDocumentIds();
         if (recentIds.isEmpty()) {
-            updateEmptyState();
+            clearRecentDocuments();
         } else {
             com.example.aistudyassistant.repositories.DocumentRepository.getInstance().getAllDocuments(userId, new ApiCallback<List<Document>>() {
                 @Override
                 public void onSuccess(List<Document> result) {
+                    Map<String, Document> existingDocuments = new HashMap<>();
+                    for (Document document : result) {
+                        existingDocuments.put(document.getId(), document);
+                    }
+
                     List<Document> sortedRecents = new ArrayList<>();
+                    List<String> existingRecentIds = new ArrayList<>();
+                    Map<String, Long> openedAtByDocumentId = new HashMap<>();
                     for (String id : recentIds) {
-                        for (Document doc : result) {
-                            if (doc.getId().equals(id)) {
-                                sortedRecents.add(doc);
-                                break;
-                            }
+                        Document document = existingDocuments.get(id);
+                        if (document != null) {
+                            sortedRecents.add(document);
+                            existingRecentIds.add(id);
+                            openedAtByDocumentId.put(
+                                    id, sharedPrefs.getRecentDocumentOpenedAt(id));
                         }
                     }
+
+                    sortedRecents.sort((first, second) -> Long.compare(
+                            openedAtByDocumentId.getOrDefault(second.getId(), 0L),
+                            openedAtByDocumentId.getOrDefault(first.getId(), 0L)));
+                    sharedPrefs.retainRecentDocumentIds(existingRecentIds);
+
                     runOnUiThread(() -> {
                         recentDocs.clear();
                         recentDocs.addAll(sortedRecents);
-                        documentAdapter.updateDocuments(recentDocs);
+                        documentAdapter.updateDocuments(
+                                sortedRecents, openedAtByDocumentId);
                         updateEmptyState();
                     });
                 }
@@ -220,6 +228,13 @@ public class HomeActivity extends AppCompatActivity {
         }
         
         // 2. TODO: Load Upcoming Schedules from Supabase
+    }
+
+    private void clearRecentDocuments() {
+        recentDocs.clear();
+        documentAdapter.updateDocuments(
+                new ArrayList<>(), new HashMap<>());
+        updateEmptyState();
     }
 
     private void updateEmptyState() {

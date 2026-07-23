@@ -26,10 +26,27 @@
     <string name="good_afternoon">Good Afternoon</string>
     <string name="good_evening">Good Evening</string>
     <string name="recent_documents">Recent Documents</string>
+    <string name="recent_document_meta">%1$s · %2$s</string>
+    <string name="recent_document_opened">Opened %1$s</string>
+    <string name="recent_document_opened_recently">Opened recently</string>
     <string name="upcoming_schedule">Upcoming Schedule</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="see_all">See All</string>
     <string name="no_documents">No documents yet.\nUpload your first document!</string>
+    <string name="note_validation_title_and_content">Please enter both a title and note content.</string>
+    <string name="note_validation_title">Please enter a note title.</string>
+    <string name="note_validation_content">Please enter note content.</string>
+    <string name="search_notes_hint">Search title, content, or document</string>
+    <string name="filter_notes">Filter notes by project and topic</string>
+    <string name="note_filter_all">All projects • All topics</string>
+    <string name="note_filter_summary">%1$s • %2$s</string>
+    <string name="all_projects">All projects</string>
+    <string name="all_topics">All topics</string>
+    <string name="select_project">Select project</string>
+    <string name="select_topic">Select topic</string>
+    <string name="next">Next</string>
+    <string name="apply">Apply</string>
+    <string name="clear_filter">Clear filter</string>
     <string name="no_schedule">No upcoming schedules.\nCreate your first study session!</string>
 
     <!-- Quick Actions -->

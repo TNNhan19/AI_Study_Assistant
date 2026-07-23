@@ -10,6 +10,9 @@ public class Note {
     private boolean pinned;
     private String createdAt;
     private String updatedAt;
+    private String documentName;
+    private String topicName;
+    private String projectName;
 
     public Note() {}
 
@@ -29,6 +32,9 @@ public class Note {
     public boolean isPinned() { return pinned; }
     public String getCreatedAt() { return createdAt; }
     public String getUpdatedAt() { return updatedAt; }
+    public String getDocumentName() { return documentName; }
+    public String getTopicName() { return topicName; }
+    public String getProjectName() { return projectName; }
 
     public void setId(String id) { this.id = id; }
     public void setUserId(String userId) { this.userId = userId; }
@@ -39,4 +45,7 @@ public class Note {
     public void setPinned(boolean pinned) { this.pinned = pinned; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+    public void setDocumentName(String documentName) { this.documentName = documentName; }
+    public void setTopicName(String topicName) { this.topicName = topicName; }
+    public void setProjectName(String projectName) { this.projectName = projectName; }
 }

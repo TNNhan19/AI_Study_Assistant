@@ -51,8 +51,8 @@ public class DocumentsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_documents);
 
-        projectId = getIntent().getStringExtra("project_id");
-        topicId = getIntent().getStringExtra("topic_id");
+        projectId = getIntent().getStringExtra(Constants.EXTRA_PROJECT_ID);
+        topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
         topicName = getIntent().getStringExtra("topic_name");
 
         initViews();
@@ -71,15 +71,13 @@ public class DocumentsActivity extends AppCompatActivity {
         bottomNavigation = findViewById(R.id.bottom_navigation);
         chipGroupFilters = findViewById(R.id.chip_group_filters);
 
-        // Hiển thị tên Topic nếu đang lọc
-        if (topicName != null) {
-            ((TextView)findViewById(R.id.toolbar).findViewById(android.R.id.text1)).setText(topicName);
-        }
+        TextView toolbarTitle = findViewById(R.id.tv_toolbar_title);
+        toolbarTitle.setText(hasValue(topicName) ? topicName : "My Documents");
 
         fabUpload.setOnClickListener(v -> {
             Intent intent = new Intent(this, UploadDocumentActivity.class);
-            if (projectId != null) intent.putExtra("project_id", projectId);
-            if (topicId != null) intent.putExtra("topic_id", topicId);
+            if (hasValue(projectId)) intent.putExtra(Constants.EXTRA_PROJECT_ID, projectId);
+            if (hasValue(topicId)) intent.putExtra(Constants.EXTRA_TOPIC_ID, topicId);
             startActivity(intent);
         });
         
@@ -299,12 +297,18 @@ public class DocumentsActivity extends AppCompatActivity {
                     setLoading(false);
                     allDocuments.clear();
                     
-                    // Lọc theo Topic hoặc Project nếu có (Phân cấp chặt chẽ)
+                    // Topic is the most specific scope. Only use the project
+                    // scope when this screen was not opened from a topic.
                     for (Document doc : result) {
-                        boolean match = true;
-                        if (topicId != null && !topicId.equals(doc.getTopicId())) match = false;
-                        else if (projectId != null && !projectId.equals(doc.getProjectId())) match = false;
-                        
+                        boolean match;
+                        if (hasValue(topicId)) {
+                            match = topicId.equals(doc.getTopicId());
+                        } else if (hasValue(projectId)) {
+                            match = projectId.equals(doc.getProjectId());
+                        } else {
+                            match = true;
+                        }
+
                         if (match) allDocuments.add(doc);
                     }
                     
@@ -330,6 +334,10 @@ public class DocumentsActivity extends AppCompatActivity {
 
     private void updateEmptyState() {
         layoutEmpty.setVisibility(filteredDocuments.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean hasValue(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     @Override

@@ -253,6 +253,9 @@
                 android:layout_marginTop="@dimen/spacing_xs"
                 android:paddingStart="@dimen/spacing_md"
                 android:paddingEnd="@dimen/spacing_md"
+                android:paddingBottom="@dimen/spacing_sm"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
                 android:nestedScrollingEnabled="false"/>
 
             <TextView

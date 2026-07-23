@@ -171,6 +171,40 @@ public class SupabaseClient {
     }
 
     /**
+     * Calls an authenticated PostgREST database function.
+     */
+    public String callRpc(String functionName, String jsonBody) {
+        return callRpc(functionName, jsonBody, null);
+    }
+
+    public String callRpc(
+            String functionName,
+            String jsonBody,
+            Object requestTag) {
+        return postRequest(
+                baseUrl + "/rest/v1/rpc/" + functionName,
+                jsonBody,
+                true,
+                true,
+                requestTag
+        );
+    }
+
+    public void cancelRequestsWithTag(Object requestTag) {
+        if (requestTag == null) return;
+        for (okhttp3.Call call : httpClient.dispatcher().queuedCalls()) {
+            if (requestTag.equals(call.request().tag())) {
+                call.cancel();
+            }
+        }
+        for (okhttp3.Call call : httpClient.dispatcher().runningCalls()) {
+            if (requestTag.equals(call.request().tag())) {
+                call.cancel();
+            }
+        }
+    }
+
+    /**
      * Generic PATCH (update) request to a Supabase table row.
      * @param table Table name
      * @param id Row ID to update
@@ -346,26 +380,38 @@ public class SupabaseClient {
     }
 
     private String postRequest(String url, String jsonBody, boolean useAuth) {
-        return postRequest(url, jsonBody, useAuth, useAuth);
+        return postRequest(url, jsonBody, useAuth, useAuth, null);
     }
 
     private String postRequest(String url, String jsonBody, boolean useAuth,
                                boolean allowRefresh) {
+        return postRequest(url, jsonBody, useAuth, allowRefresh, null);
+    }
+
+    private String postRequest(
+            String url,
+            String jsonBody,
+            boolean useAuth,
+            boolean allowRefresh,
+            Object requestTag) {
         try {
             RequestBody body = RequestBody.create(
                     jsonBody,
                     MediaType.parse("application/json; charset=utf-8")
             );
             String requestToken = useAuth ? getBearerToken() : anonKey;
-            Request request = new Request.Builder()
+            Request.Builder requestBuilder = new Request.Builder()
                     .url(url)
                     .post(body)
                     .addHeader("apikey", anonKey)
                     // Auth public request dùng anon key; thao tác DB dùng access token nếu đã login.
                     .addHeader("Authorization", "Bearer " + requestToken)
                     .addHeader("Content-Type", "application/json")
-                    .addHeader("Prefer", "return=representation")
-                    .build();
+                    .addHeader("Prefer", "return=representation");
+            if (requestTag != null) {
+                requestBuilder.tag(requestTag);
+            }
+            Request request = requestBuilder.build();
             return executeWithRefresh(request, allowRefresh, requestToken).body;
         } catch (IOException e) {
             Log.e(TAG, "POST error: " + e.getMessage());
