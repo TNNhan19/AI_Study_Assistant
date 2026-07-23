@@ -9,6 +9,13 @@
         <item name="android:colorBackground">@color/background</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="editTextStyle">@style/Widget.AIStudyAssistant.EditText</item>
+        <item name="android:editTextStyle">@style/Widget.AIStudyAssistant.EditText</item>
+        <item name="autoCompleteTextViewStyle">@style/Widget.AIStudyAssistant.AutoCompleteTextView</item>
+        <item name="android:autoCompleteTextViewStyle">@style/Widget.AIStudyAssistant.AutoCompleteTextView</item>
         <item name="android:statusBarColor">@color/primary_dark</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:fontFamily">sans-serif</item>
@@ -62,8 +69,23 @@
         <item name="boxCornerRadiusTopEnd">12dp</item>
         <item name="boxCornerRadiusBottomStart">12dp</item>
         <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxBackgroundColor">@color/surface</item>
         <item name="boxStrokeColor">@color/primary_light</item>
         <item name="hintTextColor">@color/primary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+    </style>
+
+    <style name="Widget.AIStudyAssistant.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:backgroundTint">@color/primary_light</item>
+    </style>
+
+    <style name="Widget.AIStudyAssistant.AutoCompleteTextView" parent="Widget.AppCompat.AutoCompleteTextView">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:popupBackground">@color/surface</item>
     </style>
 
     <!-- Chip style -->
