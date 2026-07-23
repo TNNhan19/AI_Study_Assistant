@@ -12,8 +12,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class AIContentRepository {
 
@@ -191,6 +194,17 @@ public class AIContentRepository {
         fetchFlashcards(query, callback);
     }
 
+    public void getFlashcardsByUser(String userId, ApiCallback<List<Flashcard>> callback) {
+        if (isBlank(userId)) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
+        String query = "user_id=eq." + userId
+                + "&order=created_at.desc,id.desc"
+                + "&limit=500";
+        fetchFlashcards(query, callback);
+    }
+
     /**
      * Bulk insert toàn bộ flashcard do AI tạo.
      */
@@ -336,6 +350,7 @@ public class AIContentRepository {
             flashcard.setTopicId(readString(json, "topic_id"));
             String difficulty = readString(json, "difficulty");
             flashcard.setDifficulty(isBlank(difficulty) ? "MEDIUM" : difficulty);
+            flashcard.setCreatedAt(parseTimestamp(readString(json, "created_at")));
             flashcards.add(flashcard);
         }
         return flashcards;
@@ -420,6 +435,51 @@ public class AIContentRepository {
         return error.getMessage() == null || error.getMessage().trim().isEmpty()
                 ? fallback
                 : error.getMessage();
+    }
+
+    private long parseTimestamp(String value) {
+        if (isBlank(value)) return 0;
+
+        value = normalizeTimestampFraction(value.trim());
+        String[] patterns = {
+                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                "yyyy-MM-dd'T'HH:mm:ssXXX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss"
+        };
+
+        for (String pattern : patterns) {
+            try {
+                SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.US);
+                format.setTimeZone(TimeZone.getTimeZone("UTC"));
+                return format.parse(value).getTime();
+            } catch (Exception ignored) {
+                // Try the next supported Supabase timestamp shape.
+            }
+        }
+        return 0;
+    }
+
+    private String normalizeTimestampFraction(String value) {
+        int dotIndex = value.indexOf('.');
+        if (dotIndex < 0) return value;
+
+        int fractionStart = dotIndex + 1;
+        int fractionEnd = fractionStart;
+        while (fractionEnd < value.length() && Character.isDigit(value.charAt(fractionEnd))) {
+            fractionEnd++;
+        }
+
+        String fraction = value.substring(fractionStart, fractionEnd);
+        if (fraction.length() > 3) {
+            fraction = fraction.substring(0, 3);
+        } else {
+            while (fraction.length() < 3) {
+                fraction += "0";
+            }
+        }
+
+        return value.substring(0, fractionStart) + fraction + value.substring(fractionEnd);
     }
 
     private boolean isBlank(String value) {

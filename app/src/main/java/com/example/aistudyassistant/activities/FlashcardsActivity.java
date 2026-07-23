@@ -41,6 +41,7 @@ public class FlashcardsActivity extends AppCompatActivity {
     private String documentName;
     private String documentUrl;
     private String documentType;
+    private String projectId;
     private String topicId;
 
     @Override
@@ -52,6 +53,7 @@ public class FlashcardsActivity extends AppCompatActivity {
         documentName = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_NAME);
         documentUrl = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_URL);
         documentType = getIntent().getStringExtra(Constants.EXTRA_DOCUMENT_TYPE);
+        projectId = getIntent().getStringExtra(Constants.EXTRA_PROJECT_ID);
         topicId = getIntent().getStringExtra(Constants.EXTRA_TOPIC_ID);
 
         initViews();
@@ -284,6 +286,7 @@ public class FlashcardsActivity extends AppCompatActivity {
         document.setName(documentName);
         document.setFilePath(documentUrl);
         document.setFileType(documentType);
+        document.setProjectId(projectId);
         document.setTopicId(topicId);
         return document;
     }
