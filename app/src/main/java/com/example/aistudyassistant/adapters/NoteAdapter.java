@@ -51,7 +51,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         holder.tvContent.setText(note.getContent());
         holder.ivPinned.setVisibility(note.isPinned() ? View.VISIBLE : View.GONE);
 
-        String contextLabel = buildContextLabel(note);
+        String contextLabel = buildReadableContextLabel(note);
         holder.tvContext.setText(contextLabel);
         holder.tvContext.setVisibility(
                 contextLabel.isEmpty() ? View.GONE : View.VISIBLE);
@@ -76,18 +76,23 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return notes.size();
     }
 
-    private String buildContextLabel(Note note) {
+    private String buildReadableContextLabel(Note note) {
         java.util.List<String> contextParts = new java.util.ArrayList<>();
         if (!TextUtils.isEmpty(note.getProjectName())) {
-            contextParts.add(note.getProjectName());
+            contextParts.add(context.getString(
+                    R.string.note_project_format,
+                    note.getProjectName()));
         }
-        if (!TextUtils.isEmpty(note.getTopicName())) {
-            contextParts.add(note.getTopicName());
-        }
+        String topicName = TextUtils.isEmpty(note.getTopicName())
+                ? context.getString(R.string.no_topic)
+                : note.getTopicName();
+        contextParts.add(context.getString(R.string.note_topic_format, topicName));
         if (!TextUtils.isEmpty(note.getDocumentName())) {
-            contextParts.add(note.getDocumentName());
+            contextParts.add(context.getString(
+                    R.string.note_document_format,
+                    note.getDocumentName()));
         }
-        return TextUtils.join(" › ", contextParts);
+        return TextUtils.join(" | ", contextParts);
     }
 
     static class NoteViewHolder extends RecyclerView.ViewHolder {

@@ -37,7 +37,7 @@
     <string name="latest_quiz_result">Latest Quiz Result</string>
     <string name="no_quiz_result">No quiz result yet. Take a quiz to see your score here.</string>
     <string name="quiz_document_format">Document: %1$s</string>
-    <string name="quiz_folder_format">Folder: %1$s</string>
+    <string name="quiz_folder_format">Project: %1$s</string>
     <string name="quiz_unknown_document">Unknown document</string>
     <string name="quiz_unknown_time">Unknown time</string>
     <string name="quiz_history">Quiz History</string>
@@ -60,6 +60,9 @@
     <string name="filter_notes">Filter notes by project and topic</string>
     <string name="note_filter_all">All projects - All topics</string>
     <string name="note_filter_summary">%1$s - %2$s</string>
+    <string name="note_project_format">Project: %1$s</string>
+    <string name="note_topic_format">Topic: %1$s</string>
+    <string name="note_document_format">Document: %1$s</string>
     <string name="all_projects">All projects</string>
     <string name="all_topics">All topics</string>
     <string name="select_project">Select project</string>
