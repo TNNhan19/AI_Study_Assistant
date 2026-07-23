@@ -1,82 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Primary Brand Colors -->
-    <color name="primary">#5C6BC0</color>
-    <color name="primary_dark">#3949AB</color>
-    <color name="primary_light">#7986CB</color>
-    <color name="primary_variant">#3D5AFE</color>
+    <color name="primary">#8B5CF6</color>
+    <color name="primary_dark">#111827</color>
+    <color name="primary_light">#A78BFA</color>
+    <color name="primary_variant">#38BDF8</color>
 
     <!-- Accent / Secondary -->
-    <color name="secondary">#7C4DFF</color>
-    <color name="secondary_light">#B39DDB</color>
-    <color name="accent_teal">#00BCD4</color>
-    <color name="accent_pink">#FF4081</color>
+    <color name="secondary">#22D3EE</color>
+    <color name="secondary_light">#67E8F9</color>
+    <color name="accent_teal">#2DD4BF</color>
+    <color name="accent_pink">#F472B6</color>
 
     <!-- Gradient Colors -->
-    <color name="gradient_start">#667eea</color>
-    <color name="gradient_end">#764ba2</color>
+    <color name="gradient_start">#141B4D</color>
+    <color name="gradient_end">#5B21B6</color>
 
     <!-- Background -->
-    <color name="background">#F0F2FF</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="surface_variant">#EEF0FF</color>
+    <color name="background">#070B1F</color>
+    <color name="surface">#10172F</color>
+    <color name="surface_variant">#18213F</color>
 
     <!-- Text Colors -->
-    <color name="text_primary">#1A1A2E</color>
-    <color name="text_secondary">#6B7280</color>
-    <color name="text_hint">#9CA3AF</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#B8C2D8</color>
+    <color name="text_hint">#7D8AA8</color>
     <color name="text_on_primary">#FFFFFF</color>
 
     <!-- Status Colors -->
-    <color name="status_uploaded">#64B5F6</color>
-    <color name="status_uploaded_bg">#E3F2FD</color>
-    <color name="status_processing">#FFB74D</color>
-    <color name="status_processing_bg">#FFF3E0</color>
-    <color name="status_completed">#81C784</color>
-    <color name="status_completed_bg">#E8F5E9</color>
-    <color name="status_failed">#E57373</color>
-    <color name="status_failed_bg">#FFEBEE</color>
-    <color name="validation_error_background">#FFFFE3E3</color>
-    <color name="validation_error_text">#FF8B1E1E</color>
+    <color name="status_uploaded">#60A5FA</color>
+    <color name="status_uploaded_bg">#182747</color>
+    <color name="status_processing">#FBBF24</color>
+    <color name="status_processing_bg">#3A2D11</color>
+    <color name="status_completed">#34D399</color>
+    <color name="status_completed_bg">#12362E</color>
+    <color name="status_failed">#FB7185</color>
+    <color name="status_failed_bg">#3E1722</color>
+    <color name="validation_error_background">#3E1722</color>
+    <color name="validation_error_text">#FCA5A5</color>
 
     <!-- Quiz Colors -->
-    <color name="quiz_correct">#4CAF50</color>
-    <color name="quiz_correct_bg">#E8F5E9</color>
-    <color name="quiz_wrong">#F44336</color>
-    <color name="quiz_wrong_bg">#FFEBEE</color>
-    <color name="quiz_option_border">#E0E0E0</color>
+    <color name="quiz_correct">#34D399</color>
+    <color name="quiz_correct_bg">#12362E</color>
+    <color name="quiz_wrong">#FB7185</color>
+    <color name="quiz_wrong_bg">#3E1722</color>
+    <color name="quiz_option_border">#2B3563</color>
 
     <!-- Chat Colors -->
-    <color name="bubble_user">#5C6BC0</color>
-    <color name="bubble_ai">#FFFFFF</color>
-    <color name="bubble_ai_border">#E8EAFF</color>
+    <color name="bubble_user">#6D5DF8</color>
+    <color name="bubble_ai">#10172F</color>
+    <color name="bubble_ai_border">#2B3563</color>
 
     <!-- Flashcard Colors -->
-    <color name="flashcard_front_start">#5C6BC0</color>
-    <color name="flashcard_front_end">#7C4DFF</color>
-    <color name="flashcard_back_start">#00BCD4</color>
-    <color name="flashcard_back_end">#3949AB</color>
+    <color name="flashcard_front_start">#312E81</color>
+    <color name="flashcard_front_end">#8B5CF6</color>
+    <color name="flashcard_back_start">#0E7490</color>
+    <color name="flashcard_back_end">#4C1D95</color>
 
     <!-- Utility -->
-    <color name="divider">#E8EAFF</color>
-    <color name="ripple">#1A5C6BC0</color>
+    <color name="divider">#2B3563</color>
+    <color name="ripple">#338B5CF6</color>
     <color name="shadow">#0D000000</color>
     <color name="transparent">#00000000</color>
     <color name="overlay">#80000000</color>
 
     <!-- Bottom Nav -->
-    <color name="nav_active">#5C6BC0</color>
-    <color name="nav_inactive">#9CA3AF</color>
+    <color name="nav_active">#22D3EE</color>
+    <color name="nav_pressed">#F8FAFC</color>
+    <color name="nav_inactive">#7D8AA8</color>
+    <color name="nav_ripple_glow">#4022D3EE</color>
 
     <!-- Quick Action Cards -->
-    <color name="qa_upload_start">#FF6B6B</color>
-    <color name="qa_upload_end">#FF8E53</color>
-    <color name="qa_ai_start">#5C6BC0</color>
-    <color name="qa_ai_end">#7C4DFF</color>
-    <color name="qa_quiz_start">#11998E</color>
-    <color name="qa_quiz_end">#38EF7D</color>
-    <color name="qa_flash_start">#F093FB</color>
-    <color name="qa_flash_end">#F5576C</color>
-    <color name="qa_schedule_start">#4FACFE</color>
-    <color name="qa_schedule_end">#00F2FE</color>
+    <color name="qa_upload_start">#F97316</color>
+    <color name="qa_upload_end">#F472B6</color>
+    <color name="qa_ai_start">#4C1D95</color>
+    <color name="qa_ai_end">#22D3EE</color>
+    <color name="qa_quiz_start">#0F766E</color>
+    <color name="qa_quiz_end">#A3E635</color>
+    <color name="qa_flash_start">#7C3AED</color>
+    <color name="qa_flash_end">#F472B6</color>
+    <color name="qa_schedule_start">#2563EB</color>
+    <color name="qa_schedule_end">#22D3EE</color>
 </resources>

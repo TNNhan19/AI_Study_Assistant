@@ -87,5 +87,6 @@
         app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="@color/nav_selector"
         app:itemTextColor="@color/nav_selector"
-        android:background="@color/surface" app:elevation="8dp"/>
+        app:itemRippleColor="@color/nav_ripple"
+        android:background="@drawable/bg_bottom_nav_galaxy" app:elevation="8dp"/>
 </LinearLayout>
